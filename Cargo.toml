@@ -1,0 +1,17 @@
+[package]
+name = "orange"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ramp = {package="ramp2", path="../ramp"}
+chk = {package="chk", path="../chk"}
+
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+bitcoin = "0.32"
+bdk_wallet = "2"
+bdk_esplora = { version = "0.22", features = ["blocking"] }
+ureq = { version = "2", features = ["json"] }
+serde_json = "1"
+chrono = "0.4.44"
