@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::fs;
+use std::{fs, env};
 use std::path::PathBuf;
 use std::str::FromStr;
 use chrono::{DateTime, Utc};
@@ -17,6 +17,8 @@ use bdk_wallet::{
     ChangeSet, KeychainKind, Wallet, WalletPersister, PersistedWallet,
 };
 
+use bitcoin::address::NetworkUnchecked;
+
 use bdk_wallet::chain::spk_client::SyncRequest;
 use bdk_wallet::chain::keychain_txout::SyncRequestBuilderExt;
 
@@ -25,9 +27,6 @@ use bdk_esplora::{
     EsploraExt,
 };
 
-const WALLET_FILE: &str = "src/wallet_state.json";
-const XPRIV_FILE: &str = "src/wallet_xpriv";
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilePersister {
     path: PathBuf,
@@ -35,12 +34,12 @@ pub struct FilePersister {
 }
 
 impl Default for FilePersister {
-    fn default() -> Self { Self::new(WALLET_FILE) }
+    fn default() -> Self { Self::new() }
 }
 
 impl FilePersister {
-    pub fn new(path: &str) -> Self {
-        let path = PathBuf::from(path);
+    pub fn new() -> Self {
+        let path = env::current_dir().expect("Failed to get current dir").join("wallet_state.json");
 
         Self { changeset: match path.exists() {
             true => serde_json::from_slice(&fs::read(&path).unwrap_or_default()).unwrap_or_default(),
@@ -101,8 +100,8 @@ impl WalletService {
     pub fn new() -> Result<Self> {
         let network = Network::Bitcoin;
 
-        let xpriv = Self::load_or_create_xpriv(network, XPRIV_FILE)?;
-        let mut persister = FilePersister::new(WALLET_FILE);
+        let xpriv = Self::load_or_create_xpriv(network)?;
+        let mut persister = FilePersister::new();
 
         let ext = Bip86(xpriv, KeychainKind::External);
         let int = Bip86(xpriv, KeychainKind::Internal);
@@ -135,8 +134,8 @@ impl WalletService {
         })
     }
 
-    fn load_or_create_xpriv(network: Network, path: &str) -> Result<Xpriv> {
-        let path = PathBuf::from(path);
+    fn load_or_create_xpriv(network: Network) -> Result<Xpriv> {
+        let path = env::current_dir().expect("Failed to get current dir").join("wallet_xpriv");
         if path.exists() { return Ok(Xpriv::from_str(fs::read_to_string(&path)?.trim())?); }
         let secret = secp256k1::SecretKey::new(&mut secp256k1::rand::thread_rng());
         let xpriv = Xpriv::new_master(network, &secret.secret_bytes())?;
@@ -145,28 +144,22 @@ impl WalletService {
     }
 
     pub fn full_sync(&mut self) -> Result<()> {
-        println!("Starting full sync.");
         let req = self.wallet.start_full_scan().build();
         let update = self.esplora.full_scan(req, 20, 4)?;
         self.wallet.apply_update(update)?;
         self.wallet.persist(&mut self.persister)?;
-        println!("Finished full sync.");
         Ok(())
     }
 
     pub fn sync(&mut self) -> Result<()> {
-        println!("Starting regular sync.");
         let req = SyncRequest::builder()
             .chain_tip(self.wallet.local_chain().tip())
             .revealed_spks_from_indexer(self.wallet.spk_index(), ..)
             .build();
 
-        println!("Starting esplora sync");
         let update = self.esplora.sync(req, 12)?;
-        println!("Finished esplora sync");
         self.wallet.apply_update(update)?;
         self.wallet.persist(&mut self.persister)?;
-        println!("Done syncing.");
         Ok(())
     }
 
@@ -181,20 +174,27 @@ impl WalletService {
     }
 
     pub fn validate_address(s: &str) -> Result<Address> {
-        Address::from_str(s)?.require_network(Network::Bitcoin).map_err(|_| anyhow!("wrong network"))
+        let uri = unified_uri::UnifiedUri::from_str(s).map_err(|_| anyhow!("Invalid str while parsing address"))?;
+        let address: Address<NetworkUnchecked> = uri.address().clone();
+        address.require_network(Network::Bitcoin).map_err(|_| anyhow!("wrong network"))
     }
 
-    pub fn price(&self) -> Result<f64> {
-        Self::btc_price_usd_at(None)
-    }
-
-    fn btc_price_usd_at(timestamp: Option<DateTime<Utc>>) -> Result<f64> {
-        let mut url = "https://api.coinbase.com/v2/prices/BTC-USD/spot".to_string();
-        if let Some(ts) = timestamp { url.push_str(&format!("?date={}", ts.format("%Y-%m-%d"))); }
-        let body = ureq::get(&url).call()?.into_string()?;
+    pub fn price(&self) -> Result<f64> { 
+        let url = "https://api.coinbase.com/v2/prices/BTC-USD/spot";
+        let body = ureq::get(url).call()?.into_string()?;
         let json: serde_json::Value = serde_json::from_str(&body)?;
         let price_str = json["data"]["amount"].as_str().ok_or_else(|| anyhow!("missing price field"))?;
         Ok(price_str.parse::<f64>()?)
+    }
+
+    fn btc_price_usd_at(timestamp: DateTime<Utc>) -> Result<f64> {
+        let start = timestamp.format("%Y-%m-%dT%H:%M:00Z");
+        let end = (timestamp + chrono::Duration::minutes(1)).format("%Y-%m-%dT%H:%M:00Z");
+        let url = format!("https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=60&start={start}&end={end}");
+        let body = ureq::get(&url).call()?.into_string()?;
+        let data: Vec<Vec<f64>> = serde_json::from_str(&body)?;
+        let candle = data.first().ok_or_else(|| anyhow!("no candle data"))?;
+        Ok(candle[4])
     }
 
     fn abbreviate_address(addr: &str) -> String {
@@ -230,7 +230,7 @@ impl WalletService {
     }
 
     fn temp_wallet(&self) -> Result<PersistedWallet<FilePersister>> {
-        let xpriv = Self::load_or_create_xpriv(self.network, XPRIV_FILE)?;
+        let xpriv = Self::load_or_create_xpriv(self.network)?;
         let ext = Bip86(xpriv, KeychainKind::External);
         let int = Bip86(xpriv, KeychainKind::Internal);
 
@@ -282,7 +282,6 @@ impl WalletService {
         let mut psbt = builder.finish()?;
         self.wallet.persist(&mut self.persister)?;
         if !self.wallet.sign(&mut psbt, bdk_wallet::SignOptions::default())? {
-            println!("sign failed: tx not finalized");
             return Err(anyhow!("tx not finalized"));
         }
 
@@ -306,6 +305,29 @@ impl WalletService {
         Ok(txid)
     }
 
+    pub fn ui_can_afford(&mut self, usd: String) -> Result<String, String> {
+        let usd = usd.trim_start_matches('$').replace(',', "").parse::<f64>().unwrap_or_default();
+        let balance = self.balance().unwrap().0;
+        let (_low, high) = self.required().unwrap();
+        let price = self.price().unwrap();
+        let amount = bitcoin::Amount::from_sat(((usd / price) * 100_000_000.0).round() as u64);
+        let required_btc = high.0 + amount;
+        let minimum = required_btc - amount; // just the fees
+        match usd <= 0.0 {
+            true => Err(String::new()),
+            false if required_btc > balance => Err(format!("Maximum send {}", Amount::new(balance - minimum).usd(price))),
+            false if minimum > amount => Err(format!("Minimum send {}", Amount::new(minimum).usd(price))),
+            false => Ok(format!("{:.8} BTC", amount.to_btc()))
+        }
+    }
+
+    pub fn ui_valid_address(address: &str) -> Result<String, String> {
+        match address.is_empty() {
+            true => Err(String::new()),
+            false => Self::validate_address(address).map(|_| String::new()).map_err(|_| "Not a valid address.".to_string()),
+        }
+    }
+
     pub fn transactions(&mut self) -> Result<Vec<WalletTx>> {
         let mut txs: Vec<_> = self.wallet.transactions().map(|t| {
             let tx = &t.tx_node.tx;
@@ -325,7 +347,7 @@ impl WalletService {
                 confirmed: t.chain_position.is_confirmed(),
                 confirmation_height: t.chain_position.confirmation_height_upper_bound(),
                 address_short: address.as_deref().map(Self::abbreviate_address),
-                btc_price_usd: Self::btc_price_usd_at(timestamp).ok(),
+                btc_price_usd: timestamp.and_then(|ts| Self::btc_price_usd_at(ts).ok()),
                 timestamp,
                 address,
                 received,
@@ -340,8 +362,6 @@ impl WalletService {
                 (Some(a_ts), Some(b_ts)) => b_ts.cmp(a_ts),
             }
         });
-
-        println!("TXS {:?}", txs);
 
         Ok(txs)
     }
@@ -369,7 +389,7 @@ impl Amount {
     pub fn usd_f32(&self, price: f64) -> f32 { (self.0.to_btc() * price) as f32 }
     pub fn btc(&self) -> String { format!("{:.8} BTC", self.0.to_btc()) }
     pub fn btc_f64(&self) -> f64 { self.0.to_btc() }
-    pub fn from_btc(amt: f64) -> Self { Amount(bitcoin::Amount::from_btc(amt).unwrap()) }
+    pub fn from_btc(amt: f64) -> Self { Amount(bitcoin::Amount::from_btc(((amt * 100_000_000.0).round() as u64) as f64).unwrap()) }
 }
 
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};

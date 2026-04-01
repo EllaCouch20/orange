@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ramp = {package="ramp2", path="../ramp"}
-chk = {package="chk", path="../chk"}
+ramp = {package="ramp2", version="0.1.6"}
+chk = {package="chk", version="1.1.0"}
 
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }
@@ -15,3 +15,8 @@ bdk_esplora = { version = "0.22", features = ["blocking"] }
 ureq = { version = "2", features = ["json"] }
 serde_json = "1"
 chrono = "0.4.44"
+unified_uri = "0.1.0"
+
+[lib]
+name="main"
+crate-type=["staticlib", "cdylib", "rlib"]

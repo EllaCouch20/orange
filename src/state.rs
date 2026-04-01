@@ -45,7 +45,7 @@ impl Transaction {
         Transaction {
             address: "bcp1ceax843sTOhuad2lahteau29uxxTHoxalo".to_string(),
             amount: BitcoinAmount {
-                btc: "0.00001234 BTC".to_string(),
+                btc: "0.00001234 bitcoin".to_string(),
                 usd: usd.to_string(),
             },
             is_priority: !is_received,

@@ -14,10 +14,10 @@ use chk::{
     RootInfo, FormItem, NumberVariant, Flow, Bumper, ChkTheme, //AvatarIconStyle,
     Display, Offset, Context, Screen, PageType, PageBuilder, Icons, //AvatarContent,
     Color, Theme, Form, Root, State, Review, Success, Message, Profile, FormSubmit,
-    Timestamp,
+    Timestamp, ListItem, Action, TableItem
 };
 
-use chk::items::{ListItem, Action, TableItem};
+// use chk::items::{ListItem, Action, TableItem};
 
 chk::run! { |_ctx: &mut Context| Orange::new() }
 
@@ -34,7 +34,7 @@ impl Orange {
 impl chk::App for Orange {
     fn roots(&self, ctx: &mut Context, theme: &Theme) -> Vec<RootInfo> {
         vec![
-            RootInfo::icon(ctx, theme, Icons::Wallet, "Wallet", BitcoinHome::new(theme, &self.wallet)),
+            RootInfo::icon(ctx, theme, Icons::Wallet, "Bitcoin", BitcoinHome::new(theme, &self.wallet)),
             RootInfo::icon(ctx, theme, Icons::Messages, "Messages", MessagesHome::new(theme)),
             // RootInfo::avatar(ctx, theme, AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary), "Profile", MessagesHome::new(theme))
         ]
@@ -60,11 +60,11 @@ impl BitcoinHome {
 
         let send = SendFlow::new(theme, wallet);
         let receive = vec![Screen::new_builder(theme, Receive::new(wallet))];
+        
 
         let mut wallet = wallet.lock().unwrap();
         let price = wallet.price().unwrap();
         let balance = wallet.balance().unwrap();
-        println!("Data received.");
         Root::new("Wallet",
             vec![
                 Display::currency(balance.usd_f32(price), &balance.btc()),
@@ -80,13 +80,15 @@ impl Receive {
     pub fn new(wallet: &Arc<Mutex<WalletService>>) -> Box<dyn PageBuilder> {
         let wallet = wallet.clone();
         Box::new(move |_: &Theme| {
-            let address = wallet.lock().unwrap().next_address().expect("Could not next address").to_string();
-            println!("Address {address:?}");
+            let address = wallet.lock().unwrap().next_address().expect("Could not next address").to_qr_uri();
             PageType::display(
                 "Receive bitcoin",
                 vec![Display::qr_code(&address, "Scan to receive bitcoin.")],
                 None,
-                Bumper::custom("Copy Address", if IS_MOBILE {Action::share(&address)} else {Action::copy(&address)}),
+                Bumper::custom(
+                    if IS_MOBILE {"Share Address"} else {"Copy Address"}, 
+                    if IS_MOBILE {Action::share(&address)} else {Action::copy(&address)}
+                ),
                 Offset::Center,
             )
         })
@@ -105,7 +107,7 @@ impl ViewTransaction {
                     TableItem::new("Date", &timestamp.date()),
                     TableItem::new("Time", &timestamp.time()),
                     TableItem::new("Received at address", &transaction.address_short.unwrap()),
-                    TableItem::new("Amount received (BTC)", &transaction.amount.btc()),
+                    TableItem::new("Bitcoin received", &transaction.amount.btc()),
                     TableItem::new("Bitcoin price", &wallet::Amount::usd_from_f32(transaction.btc_price_usd.unwrap() as f32)),
                     TableItem::new("Amount received", &transaction.amount.usd(price))
                 ],
@@ -113,7 +115,7 @@ impl ViewTransaction {
                     TableItem::new("Date", &timestamp.date()),
                     TableItem::new("Time", &timestamp.time()),
                     TableItem::new("Sent to address", &transaction.address_short.unwrap_or_default()),
-                    TableItem::new("Amount sent (BTC)", &transaction.amount.btc()),
+                    TableItem::new("Bitcoin sent", &transaction.amount.btc()),
                     TableItem::new("Bitcoin price", &wallet::Amount::usd_from_f32(transaction.btc_price_usd.unwrap() as f32)),
                     TableItem::new("Amount sent", &transaction.amount.usd(price)),
                     TableItem::new("Network fee", &transaction.fee.unwrap().usd(price)),
@@ -140,7 +142,7 @@ impl SendFlow {
     pub fn new(theme: &Theme, wallet: &Arc<Mutex<WalletService>>) -> Form {
         let w = wallet.clone();
         let price = wallet.lock().unwrap().price().unwrap();
-        let balance = wallet.lock().unwrap().balance().unwrap();
+        let (low, high) = wallet.lock().unwrap().required().unwrap();
 
         let closure = Box::new(move |_: &mut Context, objects: &Vec<State>| {
             let State::Text(address) = objects[0].clone() else { panic!("No Address"); };
@@ -180,11 +182,11 @@ impl SendFlow {
             vec![
                 Display::review("Confirm address", &address, "Bitcoin sent to the wrong address can never be recovered."),
                 Display::table("Confirm amount", vec![
-                    TableItem::new("Amount Sent (BTC)", &amount.btc()),
-                    TableItem::new("Send Speed", speed_label),
-                    TableItem::new("Amount Sent", &amount.usd(price)),
-                    TableItem::new("Transaction Fee", &fee.usd(price)),
-                    TableItem::new("Transaction Total", &(amount + fee).usd(price)),
+                    TableItem::new("Bitcoin sent", &amount.btc()),
+                    TableItem::new("Send speed", speed_label),
+                    TableItem::new("Amount sent", &amount.usd(price)),
+                    TableItem::new("Transaction fee", &fee.usd(price)),
+                    TableItem::new("Transaction total", &(amount + fee).usd(price)),
                 ]),
             ]
         };
@@ -196,29 +198,12 @@ impl SendFlow {
         };
         
         let w = wallet.clone();
-        let (low, high) = w.clone().lock().unwrap().required().unwrap();
         Form::new(theme, vec![
             FormItem::text("Bitcoin address", Some(vec![
                 ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
-                ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr()),
-            ]), |a: String| match a.is_empty() {
-                true => Err(String::new()),
-                false => WalletService::validate_address(&a).map(|_| String::new()).map_err(|_| "Not a valid address.".to_string()),
-            }),
-            FormItem::number("Bitcoin amount", NumberVariant::Currency, move |a: String| {
-                let wallet = w.clone();
-                let usd = a.trim_start_matches('$').parse::<f64>().unwrap_or_default();
-                let amount = bitcoin::Amount::from_sat(((usd / price) * 100_000_000.0).round() as u64);
-
-                let required_btc = (wallet.lock().unwrap().required().unwrap().1.0 + amount).to_btc();
-                let minimum = required_btc - amount.to_btc(); // just the fees
-                match usd <= 0.0 {
-                    true => Err(String::new()),
-                    false if required_btc > balance.btc_f64() => Err(format!("Maximum send {}", wallet::Amount::from_btc(balance.btc_f64() - minimum).usd(price))),
-                    false if minimum > amount.to_btc() => Err(format!("Minimum send {}", wallet::Amount::from_btc(minimum).usd(price))),
-                    false => Ok(format!("{:.8} BTC", amount.to_btc()))
-                }
-            }),
+                ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme)),
+            ]), |a: String| WalletService::ui_valid_address(&a)),
+            FormItem::number("Bitcoin amount", NumberVariant::Currency, move |a: String| w.clone().lock().unwrap().ui_can_afford(a)),
             FormItem::enumerator("Transaction speed", vec![
                 ("Standard", &format!("Arrives in ~2 hours\n{} bitcoin network fee", low.usd(price))),
                 ("Priority", &format!("Arrives in ~30 minutes\n{} bitcoin network fee", high.usd(price))),
@@ -237,7 +222,7 @@ impl MessagesHome {
         let items = vec![ListItem::avatar(message.author.avatar(), &message.author.name, &message.message, None, Some(Flow::new(chat)))];
 
         Root::new(
-            "Messages", vec![Display::list(None, items, None)], None, 
+            "Messages", vec![Display::list(None, items, Some("No messages yet.\nGet started by messaging a friend."))], None, 
             ("New Message".into(), Flow::from_form(NewMessageFlow::new(theme))), None,
         )
     }
@@ -251,7 +236,6 @@ impl NewMessageFlow {
         Form::new(theme, vec![FormItem::search("Select recipient", items)], None, None, closure)
     }
 }
-
 
 pub struct Chat;
 impl Chat {

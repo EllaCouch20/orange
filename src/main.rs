@@ -1,3 +1,3 @@
 fn main() {
-    orange::maverick_main()
+    main::maverick_main()
 }
