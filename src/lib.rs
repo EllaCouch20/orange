@@ -11,10 +11,10 @@ mod state;
 pub use state::*;
 
 use chk::{
-    RootInfo, FormItem, NumberVariant, Flow, Bumper, ChkTheme, //AvatarIconStyle,
-    Display, Offset, Context, PageType, PageBuilder, Icons, //AvatarContent,
+    RootInfo, FormItem, NumberVariant, Flow, Bumper, ChkTheme, AvatarIconStyle,
+    Display, Offset, Context, PageType, PageBuilder, Icons, AvatarContent,
     Color, Theme, Form, Root, State, Review, Success, Message, Profile, FormSubmit,
-    Timestamp, ListItem, Action, TableItem
+    Timestamp, ListItem, Action, TableItem, Input
 };
 
 // use chk::items::{ListItem, Action, TableItem};
@@ -36,7 +36,7 @@ impl chk::App for Orange {
         vec![
             RootInfo::icon(ctx, theme, Icons::Wallet, "Bitcoin", BitcoinHome::new(theme, &self.wallet)),
             RootInfo::icon(ctx, theme, Icons::Messages, "Messages", MessagesHome::new(theme)),
-            // RootInfo::avatar(ctx, theme, AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary), "Profile", MessagesHome::new(theme))
+            RootInfo::avatar(ctx, theme, AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary), "Profile", MyProfile::new(Profile::me()))
         ]
     }
 
@@ -64,7 +64,7 @@ impl BitcoinHome {
         let mut wallet = wallet.lock().unwrap();
         let price = wallet.price().unwrap();
         let balance = wallet.balance().unwrap();
-        Root::new("Wallet",
+        Root::display("Wallet",
             vec![
                 Display::currency(balance.usd_f32(price), &balance.btc()),
                 Display::list(None, items, None),
@@ -91,6 +91,22 @@ impl Receive {
                 Offset::Center,
             )
         })
+    }
+}
+
+pub struct MyProfile;
+impl MyProfile {
+    pub fn new(profile: Profile) -> Root {
+        let profile = profile.clone();
+        Root::both("My Profile",
+            vec![
+                Input::avatar(profile.avatar(), Some((Icons::Edit, AvatarIconStyle::Secondary)), None),
+                Input::text("Username", true, Some(profile.name.to_string()), None),
+                Input::text("About me", true, Some(profile.name), None),
+            ],
+            vec![],
+            None, ("Save".into(), Flow::default()), None,
+        )
     }
 }
 
@@ -179,7 +195,7 @@ impl SendForm {
             };
 
             vec![
-                Display::review("Confirm address", &address, "Bitcoin sent to the wrong address can never be recovered."),
+                Display::cta("Confirm address", Some(&address), "Bitcoin sent to the wrong address can never be recovered.", vec![]),
                 Display::table("Confirm amount", vec![
                     TableItem::new("Bitcoin sent", &amount.btc()),
                     TableItem::new("Send speed", speed_label),
@@ -220,7 +236,7 @@ impl MessagesHome {
         let chat = Flow::new(theme, vec![Chat::new(messages)]);
         let items = vec![ListItem::avatar(message.author.avatar(), &message.author.name, &message.message, None, Some(chat))];
 
-        Root::new(
+        Root::display(
             "Messages", vec![Display::list(None, items, Some("No messages yet.\nGet started by messaging a friend."))], None, 
             ("New Message".into(), Flow::from_form(NewMessageFlow::new(theme))), None,
         )
