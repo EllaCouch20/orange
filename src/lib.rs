@@ -12,7 +12,7 @@ pub use state::*;
 
 use chk::{
     RootInfo, FormItem, NumberVariant, Flow, Bumper, ChkTheme, //AvatarIconStyle,
-    Display, Offset, Context, Screen, PageType, PageBuilder, Icons, //AvatarContent,
+    Display, Offset, Context, PageType, PageBuilder, Icons, //AvatarContent,
     Color, Theme, Form, Root, State, Review, Success, Message, Profile, FormSubmit,
     Timestamp, ListItem, Action, TableItem
 };
@@ -47,20 +47,19 @@ impl chk::App for Orange {
 pub struct BitcoinHome;
 
 impl BitcoinHome {
-    fn new(theme: &Theme, wallet: &Arc<Mutex<WalletService>>) -> PageType {
+    fn new(theme: &Theme, wallet: &Arc<Mutex<WalletService>>) -> Root {
         let price = wallet.lock().unwrap().price().unwrap();
         let items = wallet.lock().unwrap().transactions().ok().unwrap().into_iter().map(|t| {
             let title = if t.received { "Received bitcoin" } else { "Sent bitcoin" };
             let subtitle = Timestamp::new(t.timestamp.map(|dt| dt.into())).friendly();
 
             let usd = t.amount.usd(price);
-            let view = vec![Screen::new_builder(theme, ViewTransaction::new(price, t))];
-            ListItem::plain(title, &subtitle, Some(&usd), Some(Flow::new(view)))
+            let view = Flow::new(theme, vec![ViewTransaction::new(price, t)]);
+            ListItem::plain(title, &subtitle, Some(&usd), Some(view))
         }).collect::<Vec<_>>();
 
-        let send = SendFlow::new(theme, wallet);
-        let receive = vec![Screen::new_builder(theme, Receive::new(wallet))];
-        
+        let send = Flow::from_form(SendForm::new(theme, wallet));
+        let receive = Flow::new(theme, vec![Receive::new(wallet)]);
 
         let mut wallet = wallet.lock().unwrap();
         let price = wallet.price().unwrap();
@@ -69,8 +68,8 @@ impl BitcoinHome {
             vec![
                 Display::currency(balance.usd_f32(price), &balance.btc()),
                 Display::list(None, items, None),
-            ], //Some(Flow::new(vec![Screen::new_builder(builder, TaskDetails)])))],
-            None, ("Receive".into(), Flow::new(receive)), Some(("Send".into(), Flow::from_form(send))),
+            ], 
+            None, ("Receive".into(), receive), Some(("Send".into(), send)),
         )
     }
 }
@@ -137,8 +136,8 @@ impl ViewTransaction {
     }
 }
 
-pub struct SendFlow;
-impl SendFlow {
+pub struct SendForm;
+impl SendForm {
     pub fn new(theme: &Theme, wallet: &Arc<Mutex<WalletService>>) -> Form {
         let w = wallet.clone();
         let price = wallet.lock().unwrap().price().unwrap();
@@ -215,11 +214,11 @@ impl SendFlow {
 #[derive(Debug, Clone)]
 pub struct MessagesHome;
 impl MessagesHome {
-    fn new(theme: &Theme) -> PageType {
+    fn new(theme: &Theme) -> Root {
         let messages = Message::tests();
         let message = messages[0].clone();
-        let chat = vec![Screen::new_builder(theme, Chat::new(messages))];
-        let items = vec![ListItem::avatar(message.author.avatar(), &message.author.name, &message.message, None, Some(Flow::new(chat)))];
+        let chat = Flow::new(theme, vec![Chat::new(messages)]);
+        let items = vec![ListItem::avatar(message.author.avatar(), &message.author.name, &message.message, None, Some(chat))];
 
         Root::new(
             "Messages", vec![Display::list(None, items, Some("No messages yet.\nGet started by messaging a friend."))], None, 

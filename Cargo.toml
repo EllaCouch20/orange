@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 ramp = {package="ramp2", version="0.1.6"}
-chk = {package="chk", version="1.1.0"}
+chk = {package="chk", path="../chk"}
 
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }

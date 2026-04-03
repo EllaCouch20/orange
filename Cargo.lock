@@ -692,8 +692,6 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 [[package]]
 name = "chk"
 version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62ca982a8ebc1173e351df284777be72987703b5f11b63c4df40b7b2fd1b0989"
 dependencies = [
  "anyanymap",
  "chrono",
