@@ -6,12 +6,13 @@ mod wallet;
 use crate::wallet::WalletService;
 mod state;
 pub use state::*;
+mod bitcoin;
+mod messages;
+mod profile;
 
-mod ui;
+use chk::{ RootInfo, ChkTheme, AvatarIconStyle, Context, Icons, AvatarContent, Color, Theme };
 
-use chk::{ RootInfo, ChkTheme, AvatarIconStyle, Context, Icons, AvatarContent, Color, Theme, Profile };
-
-chk::run! { |_ctx: &mut Context| Orange::new() }
+chk::run! {[messages::ChatRoom]; |_ctx: &mut Context| Orange::new() }
 
 pub struct Orange { wallet: Arc<Mutex<WalletService>> }
 impl Default for Orange { fn default() -> Self {Orange::new()} }
@@ -25,10 +26,11 @@ impl Orange {
 
 impl chk::App for Orange {
     fn roots(&self, ctx: &mut Context, theme: &Theme) -> Vec<RootInfo> {
+        let messages_home = messages::MessagesHome::new(ctx, theme);
         vec![
-            RootInfo::icon(ctx, theme, Icons::Wallet, "Bitcoin", ui::BitcoinHome::new(theme, &self.wallet)),
-            RootInfo::icon(ctx, theme, Icons::Messages, "Messages", ui::MessagesHome::new(theme)),
-            RootInfo::avatar(ctx, theme, AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary), "Profile", ui::ProfileHome::new(theme, Profile::me()))
+            RootInfo::icon(ctx, theme, Icons::Wallet, "Bitcoin", bitcoin::BitcoinHome::new(theme, &self.wallet)),
+            RootInfo::icon(ctx, theme, Icons::Messages, "Messages", messages_home),
+            RootInfo::avatar(ctx, theme, AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary), "Profile", profile::ProfileHome::new(theme))
         ]
     }
 
