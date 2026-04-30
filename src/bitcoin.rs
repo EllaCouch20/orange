@@ -19,25 +19,29 @@ pub struct BitcoinHome;
 impl BitcoinHome {
     pub fn new(theme: &Theme, wallet: &Arc<Mutex<WalletService>>) -> Root {
         let price = wallet.lock().unwrap().price().unwrap();
-        let items = wallet.lock().unwrap().transactions().ok().unwrap().into_iter().map(|t| {
-            let title = if t.received { "Received bitcoin" } else { "Sent bitcoin" };
-            let subtitle = Timestamp::new(t.timestamp.map(|dt| dt.into())).friendly();
-
-            let usd = t.amount.usd(price);
-            let view = Flow::new(theme, vec![ViewTransaction::new(price, t)]);
-            ListItem::plain(title, &subtitle, Some(&usd), Some(view))
-        }).collect::<Vec<_>>();
 
         let send = Flow::from_form(SendForm::new(theme, wallet));
         let receive = Flow::new(theme, vec![Receive::new(wallet)]);
 
-        let mut wallet = wallet.lock().unwrap();
-        let price = wallet.price().unwrap();
-        let balance = wallet.balance().unwrap();
+        let mut w = wallet.lock().unwrap();
+        let price = w.price().unwrap();
+        let balance = w.balance().unwrap();
+
+        let wallet = wallet.clone();
+        let theme = theme.clone();
         Root::display("Wallet",
             vec![
                 Display::currency(balance.usd_f32(price), &balance.btc()),
-                Display::list(None, items, None),
+                // Display::list(None, Arc::new(Box::new(move |ctx: &mut Context| {
+                //     wallet.lock().unwrap().transactions().ok().unwrap().into_iter().map(|t| {
+                //         let title = if t.received { "Received bitcoin" } else { "Sent bitcoin" };
+                //         let subtitle = Timestamp::new(t.timestamp.map(|dt| dt.into())).friendly();
+
+                //         let usd = t.amount.usd(price);
+                //         let view = Flow::new(&theme.clone(), vec![ViewTransaction::new(price, t)]);
+                //         ListItem::plain(title, &subtitle, Some(&usd), Some(view))
+                //     }).collect::<Vec<_>>()
+                // })), None),
             ], 
             None, ("Receive".into(), receive), Some(("Send".into(), send)),
         )

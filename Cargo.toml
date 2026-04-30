@@ -17,7 +17,6 @@ serde_json = "1"
 chrono = "0.4.44"
 unified_uri = "0.1.0"
 air = {path = "../air"}
-rand = "0.8"
 
 [lib]
 name="main"

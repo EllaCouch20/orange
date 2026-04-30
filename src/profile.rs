@@ -1,11 +1,8 @@
 #![allow(clippy::new_ret_no_self)]
 
 use chk::{Flow, AvatarIconStyle, AvatarContent, Display, Icons, Root, Action, Input, Theme, PageType, Bumper, Offset, PageBuilder, IS_MOBILE, ActionItem};
-
+use chk::messages::Profile;
 use air::names::{Name, Secret};
-use std::sync::Arc;
-use rand::{seq::SliceRandom, Rng};
-use std::fs;
 
 pub struct ProfileHome;
 impl ProfileHome {
@@ -24,54 +21,17 @@ impl ProfileHome {
         //     ),
         // }];
 
-        Root::input("My Profile",
+        Root::both("My Profile",
             vec![
                 Input::avatar(profile.avatar, Some((Icons::Edit, AvatarIconStyle::Secondary)), None),
                 Input::text("Username", true, Some(profile.username.to_string()), None),
-                Input::text("About me", true, Some(profile.username), None),
+                Input::text("About me", true, Some(profile.notes), None),
             ],
-            // display,
+            vec![
+                Display::cta("Orange name", None, &profile.name.to_string(), vec![("Copy".to_string(), Icons::Copy, Action::copy(&profile.name.to_string()))]),
+            ],
             None, ("Save".into(), Flow::default()), None,
         )
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Profile {
-    pub name: Name,
-    pub username: String,
-    pub avatar: AvatarContent,
-}
-
-impl Profile {
-    pub fn new(name: Name) -> Self { Profile { name, username: Username::new(), avatar: AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary) } }
-    // pub fn avatar(&self) -> AvatarContent {
-    //     match &self.pfp {
-    //         Some(img) => AvatarContent::image(img.clone()),
-    //         None => AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary)
-    //     }
-    // }
-}
-
-pub struct Username;
-impl Username {
-    pub fn new() -> String {        
-        let mut rng = rand::thread_rng();
-
-        let read = |p: &str| -> Vec<String> {fs::read_to_string(p).unwrap().lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect()};
-
-        let cap = |s: &str| {
-            let s = s.to_lowercase();
-            let mut c = s.chars();
-            c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default()
-        };
-
-        let animals = read("usernames/animals.txt");
-        let foods = read("usernames/foods.txt");
-        let adjectives = read("usernames/adjectives.txt");
-
-        let noun_list = if rng.gen_bool(0.5) { &animals } else { &foods };
-        format!("{}{}", cap(adjectives.choose(&mut rng).unwrap()), cap(noun_list.choose(&mut rng).unwrap()))
     }
 }
 
