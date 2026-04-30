@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::{fs, env};
@@ -388,8 +390,8 @@ impl Amount {
 
     pub fn usd_f32(&self, price: f64) -> f32 { (self.0.to_btc() * price) as f32 }
     pub fn btc(&self) -> String { format!("{:.8} BTC", self.0.to_btc()) }
-    pub fn btc_f64(&self) -> f64 { self.0.to_btc() }
-    pub fn from_btc(amt: f64) -> Self { Amount(bitcoin::Amount::from_btc(((amt * 100_000_000.0).round() as u64) as f64).unwrap()) }
+    // pub fn btc_f64(&self) -> f64 { self.0.to_btc() }
+    // pub fn from_btc(amt: f64) -> Self { Amount(bitcoin::Amount::from_btc(((amt * 100_000_000.0).round() as u64) as f64).unwrap()) }
 }
 
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
