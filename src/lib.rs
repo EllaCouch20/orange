@@ -13,7 +13,7 @@ mod profile;
 
 use chk::{ RootInfo, ChkTheme, AvatarIconStyle, Context, Icons, AvatarContent, Color, Theme };
 
-chk::run! {[chk::messages::ChatRoom]; |_ctx: &mut Context| Orange::new() }
+chk::run! {[chk::messages::ChatRoom, chk::messages::Contact]; |_ctx: &mut Context| Orange::new() }
 
 pub struct Orange { wallet: Arc<Mutex<WalletService>> }
 impl Default for Orange { fn default() -> Self {Orange::new()} }
@@ -29,11 +29,12 @@ impl chk::App for Orange {
     fn roots(&self, ctx: &mut Context, theme: &Theme) -> Vec<RootInfo> {
         let messages_home = messages::MessagesHome::new(ctx, theme);
         let contacts_home = contacts::ContactsHome::new(ctx, theme);
+        let profile_home = profile::ProfileHome::new(ctx, theme);
         vec![
             RootInfo::icon(ctx, theme, Icons::Wallet, "Bitcoin", bitcoin::BitcoinHome::new(theme, &self.wallet)),
             RootInfo::icon(ctx, theme, Icons::Messages, "Messages", messages_home),
             RootInfo::icon(ctx, theme, Icons::Group, "Contacts", contacts_home),
-            RootInfo::avatar(ctx, theme, AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary), "Profile", profile::ProfileHome::new(theme))
+            RootInfo::avatar(ctx, theme, AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary), "Profile", profile_home)
         ]
     }
 

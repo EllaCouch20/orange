@@ -20,8 +20,10 @@ impl BitcoinHome {
     pub fn new(theme: &Theme, wallet: &Arc<Mutex<WalletService>>) -> Root {
         let price = wallet.lock().unwrap().price().unwrap();
 
-        let send = Flow::from_form(SendForm::new(theme, wallet));
-        let receive = Flow::new(theme, vec![Receive::new(wallet)]);
+        let sw = wallet.clone();
+        let rw = wallet.clone();
+        let send = Box::new(move |_: &mut Context, theme: &Theme| Flow::from_form(SendForm::new(theme, &sw)));
+        let receive = Box::new(move |_: &mut Context, theme: &Theme| Flow::new(theme, vec![Receive::new(&rw)]));
 
         let mut w = wallet.lock().unwrap();
         let price = w.price().unwrap();
@@ -29,7 +31,7 @@ impl BitcoinHome {
 
         let wallet = wallet.clone();
         let theme = theme.clone();
-        Root::display("Wallet",
+        Root::new("Wallet",
             vec![
                 Display::currency(balance.usd_f32(price), &balance.btc()),
                 // Display::list(None, Arc::new(Box::new(move |ctx: &mut Context| {
@@ -132,6 +134,8 @@ impl SendForm {
                 Ok(txid) => println!("broadcasted tx: {txid}"),
                 Err(err) => eprintln!("send failed: {err}"),
             }
+
+            None
         }) as Box<dyn FormSubmit>;
 
         println!("On submit created.");
@@ -171,12 +175,12 @@ impl SendForm {
         };
         
         let w = wallet.clone();
-        Form::new(theme, vec![
+        Form::flow(theme, vec![
             FormItem::text("Bitcoin address", Some(vec![
                 ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
-                ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme)),
-            ]), |a: String| WalletService::ui_valid_address(&a)),
-            FormItem::number("Bitcoin amount", NumberVariant::Currency, move |a: String| w.clone().lock().unwrap().ui_can_afford(a)),
+                ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a bitcoin QR code")),
+            ]), |ctx: &mut Context, a: String| WalletService::ui_valid_address(&a)),
+            FormItem::number("Bitcoin amount", NumberVariant::Currency, move |ctx: &mut Context, a: String| w.clone().lock().unwrap().ui_can_afford(a)),
             FormItem::enumerator("Transaction speed", vec![
                 ("Standard", &format!("Arrives in ~2 hours\n{} bitcoin network fee", low.usd(price))),
                 ("Priority", &format!("Arrives in ~30 minutes\n{} bitcoin network fee", high.usd(price))),

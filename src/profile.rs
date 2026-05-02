@@ -1,13 +1,14 @@
 #![allow(clippy::new_ret_no_self)]
 
-use chk::{Flow, AvatarIconStyle, AvatarContent, Display, Icons, Root, Action, Input, Theme, PageType, Bumper, Offset, PageBuilder, IS_MOBILE, ActionItem};
-use chk::messages::Profile;
-use air::names::{Name, Secret};
+use chk::{Context, State, FormSubmit, FormItem, Flow, AvatarIconStyle, AvatarContent, Display, Icons, Root, Action, Input, Theme, PageType, Bumper, Offset, PageBuilder, IS_MOBILE, ActionItem};
+use chk::messages::{Profile, ChangeNotes, ChangeUsername};
+use air::names::{Name, Secret, Id};
+use crate::contacts::ViewContact;
 
 pub struct ProfileHome;
 impl ProfileHome {
-    pub fn new(theme: &Theme) -> Root {
-        let profile = Profile::new(Secret::new().name());
+    pub fn new(ctx: &mut Context, theme: &Theme) -> Root {
+        let (profile, contact_id) = Profile::me(ctx);
         // let display = vec![match IS_MOBILE {
         //     true => Display::cta(
         //         "Connect to a Computer", None, 
@@ -21,17 +22,47 @@ impl ProfileHome {
         //     ),
         // }];
 
-        Root::both("My Profile",
+        // let id: Option<Id> = ctx.list::<Contact>().iter().find(|contact| {
+        //     let name = ctx.get::<Contact, _>(&contact, "/name");
+        //     name == ctx.me()
+        // }).unwrap();
+
+        let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
+            if let Some(State::Text(result)) = objects.get(1) {
+                let _ = ctx.send(contact_id, "/username", ChangeUsername(result.to_string()));
+            }
+            if let Some(State::Text(result)) = objects.get(2) {
+                let _ = ctx.send(contact_id, "/notes", ChangeNotes(result.to_string()));
+            }
+            None
+        }) as Box<dyn FormSubmit>;
+        let name = profile.name.unwrap().clone();
+            
+
+        Root::custom(PageType::edit_and_display(
+            "My profile",
             vec![
-                Input::avatar(profile.avatar, Some((Icons::Edit, AvatarIconStyle::Secondary)), None),
-                Input::text("Username", true, Some(profile.username.to_string()), None),
-                Input::text("About me", true, Some(profile.notes), None),
+                FormItem::avatar_with_preset("Avatar", profile.avatar),
+                FormItem::text_with_preset("Username", &profile.username.clone(), None, move |ctx: &mut Context, a: String| {
+                    match a.is_empty() {
+                        true => Err("Username cannot be empty".to_string()),
+                        false => {
+                            if let Some(current) = Profile::from_name(ctx, name.clone()) {
+                                match current.username == a {
+                                    true => Err(String::new()),
+                                    false => Ok(a.to_string())
+                                }
+                            } else {Ok(a.to_string())}
+                        }
+                    }
+                }),
+                FormItem::text_with_preset("About me", &profile.notes, None, |ctx: &mut Context, a: String| Ok(a.to_string())),
             ],
             vec![
-                Display::cta("Orange name", None, &profile.name.to_string(), vec![("Copy".to_string(), Icons::Copy, Action::copy(&profile.name.to_string()))]),
+                Display::cta("Orange name", None, &profile.name.unwrap().to_string(), vec![("Copy".to_string(), Icons::Copy, Action::copy(&profile.name.unwrap().to_string()))]),
             ],
-            None, ("Save".into(), Flow::default()), None,
-        )
+            closure
+        ))
     }
 }
 
