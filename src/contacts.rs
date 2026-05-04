@@ -28,13 +28,15 @@ impl ContactsHome {
                 Display::list(None, Arc::new(Box::new(move |ctx: &mut Context| {
                     let ids = ctx.list::<Contact>();
                     let me = ctx.me();
-                    ids.iter().flat_map(|id| {
+                    let mut items = ids.iter().flat_map(|id| {
                         let profile = Profile::from_id(ctx, *id);
                         if profile.name.unwrap() != ctx.me() {
                             let view_contact = Flow::new(&theme, vec![ViewContact::new(ctx, profile.clone(), id.clone())]);
                             Some(ListItem::avatar(AvatarContent::default(), &profile.username, &profile.name(), None, Some(view_contact)))
                         } else {None}
-                    }).collect::<Vec<ListItem>>()
+                    }).collect::<Vec<ListItem>>();
+                    items.sort_by(|a, b| a.title.cmp(&b.title));
+                    items
                 })), Some("No contacts yet.\nGet started by adding a friend.")),
             ], None, 
             ("New Contact".into(), new_contact), None,
@@ -73,43 +75,7 @@ impl NewContact {
 
 pub struct ViewContact;
 impl ViewContact {
-    pub fn new(ctx: &mut Context, profile: Profile, contact_id: Id) -> Box<dyn PageBuilder> {
-        Box::new(move || {
-            let profile = profile.clone();
-            let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
-                if let Some(State::Text(result)) = objects.get(1) {
-                    let _ = ctx.send(contact_id, "/username", ChangeUsername(result.to_string()));
-                }
-                if let Some(State::Text(result)) = objects.get(2) {
-                    let _ = ctx.send(contact_id, "/notes", ChangeNotes(result.to_string()));
-                }
-                None
-            }) as Box<dyn FormSubmit>;
-            let name = profile.name.unwrap().clone();
-            PageType::edit_and_display(
-                "View contact",
-                vec![
-                    FormItem::avatar_with_preset("Avatar", profile.avatar),
-                    FormItem::text_with_preset("Username", &profile.username.clone(), None, move |ctx: &mut Context, a: String| {
-                        match a.is_empty() {
-                            true => Err("Username cannot be empty".to_string()),
-                            false => {
-                                if let Some(current) = Profile::from_name(ctx, name.clone()) {
-                                    match current.username == a {
-                                        true => Err(String::new()),
-                                        false => Ok(a.to_string())
-                                    }
-                                } else {Ok(a.to_string())}
-                            }
-                        }
-                    }),
-                    FormItem::text_with_preset("About me", &profile.notes, None, |ctx: &mut Context, a: String| Ok(a.to_string())),
-                ],
-                vec![
-                    Display::cta("Orange name", None, &profile.name.unwrap().to_string(), vec![("Copy".to_string(), Icons::Copy, Action::copy(&profile.name.unwrap().to_string()))]),
-                ],
-                closure
-            )
-        })
+    pub fn new(ctx: &mut Context, profile: Profile, id: Id) -> Box<dyn PageBuilder> {
+        Box::new(move || PageType::profile(profile.clone(), id.clone()))
     }
 }

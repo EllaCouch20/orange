@@ -36,8 +36,9 @@ impl ProfileHome {
             }
             None
         }) as Box<dyn FormSubmit>;
-        let name = profile.name.unwrap().clone();
-            
+
+        let username_name = profile.name.unwrap().clone();
+        let notes_name = username_name.clone();
 
         Root::custom(PageType::edit_and_display(
             "My profile",
@@ -47,7 +48,7 @@ impl ProfileHome {
                     match a.is_empty() {
                         true => Err("Username cannot be empty".to_string()),
                         false => {
-                            if let Some(current) = Profile::from_name(ctx, name.clone()) {
+                            if let Some(current) = Profile::from_name(ctx, username_name.clone()) {
                                 match current.username == a {
                                     true => Err(String::new()),
                                     false => Ok(a.to_string())
@@ -56,7 +57,15 @@ impl ProfileHome {
                         }
                     }
                 }),
-                FormItem::text_with_preset("About me", &profile.notes, None, |ctx: &mut Context, a: String| Ok(a.to_string())),
+                FormItem::text_with_preset("About me", &profile.notes, None, move |ctx: &mut Context, a: String| {
+                    if let Some(current) = Profile::from_name(ctx, notes_name.clone()) {
+                        // match current.notes == a {
+                        //     true => Err(String::new()),
+                        //     false => Ok(a.to_string())
+                        // }
+                        Ok(a.to_string())
+                    } else {Ok(a.to_string())}
+                }),
             ],
             vec![
                 Display::cta("Orange name", None, &profile.name.unwrap().to_string(), vec![("Copy".to_string(), Icons::Copy, Action::copy(&profile.name.unwrap().to_string()))]),

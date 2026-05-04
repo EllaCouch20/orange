@@ -36,13 +36,9 @@ impl MessagesHome {
                                     chat_avatar = AvatarContent::Icon(Icons::Profile, AvatarIconStyle::Secondary);
                                 }
                                 false => if let Some(first) = names.get(0) {
-                                    ctx.list::<Contact>().iter().for_each(|contact| {
-                                        if Some(first.clone()) == ctx.get::<Contact, _>(&contact, "/name") {
-                                            if let Some(Substance::String(name)) = ctx.get::<Contact, _>(&contact, "/username") {
-                                                chat_name = name;
-                                            }
-                                        }
-                                    })
+                                    if let Some(p) = Profile::from_substance(ctx, first) {
+                                        chat_name = p.username
+                                    }
                                 }
                             }
                         }
@@ -52,7 +48,6 @@ impl MessagesHome {
                                 if let Ok(Substance::String(message)) = last.query("/body") {
                                     chat_last = format!("You: {}", message);
                                     ctx.list::<Contact>().iter().for_each(|contact| {
-                                        // println!("{:?}, {:?}", ctx.get::<Contact, _>(&contact, "/name"), last.query("/author").ok());
                                         let contact_name = ctx.get::<Contact, _>(&contact, "/name");
                                         if contact_name == last.query("/author").ok() {
                                             if contact_name != Some(Substance::String(ctx.me().to_string())) {
@@ -66,17 +61,8 @@ impl MessagesHome {
                             }
                         }
 
-                        // println!("Messages {:?}", messages.query("/body"));
-                        // println!("Members {:?}", members);
                         let chat = Flow::new(&theme, vec![Chat::new(*id)]);
-                        // let author = Profile::new(Secret::new().name());
-                        // match members.get(0) {
-                        //     Some(author) => ListItem::avatar(author.avatar, &author.username, "No message.", None, Some(chat)),
-                        //     None => ListItem::avatar(AvatarContent::default(), "Group Message", "No message.", None, Some(chat)),
-                        // }
-
                         ListItem::avatar(chat_avatar, &chat_name, &chat_last, None, Some(chat))
-                        
                     }).collect::<Vec<ListItem>>()
                 })), Some("No messages yet.\nGet started by messaging a friend.")),
             ], None, 
@@ -103,7 +89,7 @@ impl NewMessageFlow {
                 })
             }
 
-            None
+            Some(Chat::new(id))
         }) as Box<dyn FormSubmit>;
 
         let items = ctx.list::<Contact>().iter().map(|id| {
