@@ -1,24 +1,19 @@
 #![allow(clippy::new_ret_no_self)]
-use chk::{Icons, Input, Action, Bumper, Offset, AvatarContent, AvatarIconStyle, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
-use chk::messages::{Profile, ChatRoom, AddMember, Contact, Username, ChangeUsername, ChangeNotes};
+use chk::{Icons, Action, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
+use chk::air::profiles::{Profile, Contact};
 
-use air::names::{Secret, Id, Name};
-use air::contract::{Contracts, Contract, Substance, Reactants, Reactant, Beaker};
+use air::names::{Id, Name};
 
 use std::str::FromStr;
-use std::collections::BTreeMap;
-use std::path::{PathBuf, Path};
-use std::convert::Infallible;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone)]
 pub struct ContactsHome;
 impl ContactsHome {
-    pub fn new(ctx: &mut Context, theme: &Theme) -> Root {
+    pub fn new(_ctx: &mut Context, theme: &Theme) -> Root {
         
-        let new_contact = Box::new(|ctx: &mut Context, theme: &Theme| Flow::from_form(NewContact::new(theme)));
+        let new_contact = Box::new(|_ctx: &mut Context, theme: &Theme| Flow::from_form(NewContact::new(theme)));
         // let new_contact = Flow::from_form(NewContact::new(theme));
         // let new_contact = Flow::new(&theme, vec![NewContact::new(theme)]);
 
@@ -27,12 +22,12 @@ impl ContactsHome {
             "Contacts", vec![
                 Display::list(None, Arc::new(Box::new(move |ctx: &mut Context| {
                     let ids = ctx.list::<Contact>();
-                    let me = ctx.me();
+                    let _me = ctx.me();
                     let mut items = ids.iter().flat_map(|id| {
                         let profile = Profile::from_id(ctx, *id);
                         if profile.name.unwrap() != ctx.me() {
-                            let view_contact = Flow::new(&theme, vec![ViewContact::new(ctx, profile.clone(), id.clone())]);
-                            Some(ListItem::avatar(AvatarContent::default(), &profile.username, &profile.name(), None, Some(view_contact)))
+                            let view_contact = Flow::new(&theme, vec![ViewContact::new(ctx, profile.clone(), *id)]);
+                            Some(ListItem::avatar(profile.avatar.clone(), &profile.username, &profile.name(), None, Some(view_contact)))
                         } else {None}
                     }).collect::<Vec<ListItem>>();
                     items.sort_by(|a, b| a.title.cmp(&b.title));
@@ -52,11 +47,9 @@ pub struct NewContact;
 impl NewContact {
     pub fn new(theme: &Theme) -> Form {
         let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
-            let (profile, id) = if let Some(State::Text(result)) = objects.get(0) {
+            let (profile, id) = if let Some(State::Text(result)) = objects.first() {
                 let name = Name::from_str(result).unwrap();
-                let profile = Profile::create(name);
-                let id = ctx.create(Contact::new(name, profile.username.to_string(), profile.notes.to_string())).unwrap();
-                (profile, id)
+                Profile::create(ctx, name)
             } else {todo!()};
             Some(ViewContact::new(ctx, profile, id))
         }) as Box<dyn FormSubmit>;
@@ -65,9 +58,12 @@ impl NewContact {
             FormItem::text("Orange name", Some(vec![
                 ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
                 ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
-            ]), |ctx: &mut Context, a: String| match a.is_empty() {
+            ]), |_ctx: &mut Context, a: String| match a.is_empty() {
                 true => Err(String::new()),
-                false => Name::from_str(&a).map(|_| String::new()).map_err(|e| "Not a valid Orange Name.".to_string()),
+                false => match Name::from_str(&a) {
+                    Ok(_) => Ok(String::new()),
+                    Err(_) => Err("Not a valid Orange Name.".to_string())
+                }
             }),
         ], None, None, closure)
     }
@@ -75,7 +71,7 @@ impl NewContact {
 
 pub struct ViewContact;
 impl ViewContact {
-    pub fn new(ctx: &mut Context, profile: Profile, id: Id) -> Box<dyn PageBuilder> {
-        Box::new(move || PageType::profile(profile.clone(), id.clone()))
+    pub fn new(_ctx: &mut Context, profile: Profile, id: Id) -> Box<dyn PageBuilder> {
+        Box::new(move || PageType::profile(profile.clone(), id))
     }
 }

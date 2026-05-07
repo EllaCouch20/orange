@@ -10,7 +10,7 @@ use chk::{
     FormItem, NumberVariant, Flow, Bumper,
     Display, Offset, Context, PageType, PageBuilder, Icons,
     Theme, Form, Root, State, Review, Success, FormSubmit,
-    Timestamp, ListItem, Action, TableItem,
+    Timestamp, Action, TableItem,
 };
 
 #[derive(Debug, Clone)]
@@ -18,7 +18,7 @@ pub struct BitcoinHome;
 
 impl BitcoinHome {
     pub fn new(theme: &Theme, wallet: &Arc<Mutex<WalletService>>) -> Root {
-        let price = wallet.lock().unwrap().price().unwrap();
+        let _price = wallet.lock().unwrap().price().unwrap();
 
         let sw = wallet.clone();
         let rw = wallet.clone();
@@ -29,8 +29,8 @@ impl BitcoinHome {
         let price = w.price().unwrap();
         let balance = w.balance().unwrap();
 
-        let wallet = wallet.clone();
-        let theme = theme.clone();
+        let _wallet = wallet.clone();
+        let _theme = theme.clone();
         Root::new("Wallet",
             vec![
                 Display::currency(balance.usd_f32(price), &balance.btc()),
@@ -179,8 +179,8 @@ impl SendForm {
             FormItem::text("Bitcoin address", Some(vec![
                 ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
                 ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a bitcoin QR code")),
-            ]), |ctx: &mut Context, a: String| WalletService::ui_valid_address(&a)),
-            FormItem::number("Bitcoin amount", NumberVariant::Currency, move |ctx: &mut Context, a: String| w.clone().lock().unwrap().ui_can_afford(a)),
+            ]), |_ctx: &mut Context, a: String| WalletService::ui_valid_address(&a)),
+            FormItem::number("Bitcoin amount", NumberVariant::Currency, move |_ctx: &mut Context, a: String| w.clone().lock().unwrap().ui_can_afford(a)),
             FormItem::enumerator("Transaction speed", vec![
                 ("Standard", &format!("Arrives in ~2 hours\n{} bitcoin network fee", low.usd(price))),
                 ("Priority", &format!("Arrives in ~30 minutes\n{} bitcoin network fee", high.usd(price))),

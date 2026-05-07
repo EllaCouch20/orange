@@ -13,7 +13,7 @@ mod profile;
 
 use chk::{ RootInfo, ChkTheme, AvatarIconStyle, Context, Icons, AvatarContent, Color, Theme };
 
-chk::run! {[chk::messages::ChatRoom, chk::messages::Contact]; |_ctx: &mut Context| Orange::new() }
+chk::run! {[chk::air::messages::ChatRoom, chk::air::profiles::Contact]; |_ctx: &mut Context| Orange::new() }
 
 pub struct Orange { wallet: Arc<Mutex<WalletService>> }
 impl Default for Orange { fn default() -> Self {Orange::new()} }
