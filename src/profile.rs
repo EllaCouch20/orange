@@ -6,7 +6,6 @@ use chk::air::profiles::{Profile, ChangeNotes, ChangeUsername};
 pub struct ProfileHome;
 impl ProfileHome {
     pub fn new(ctx: &mut Context, _theme: &Theme) -> Root {
-        let (profile, id) = Profile::me(ctx);
-        Root::custom(PageType::profile(profile, id))
+        Root::custom(PageType::profile(Profile::me(ctx)))
     }
 }

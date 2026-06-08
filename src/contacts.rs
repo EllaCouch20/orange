@@ -1,12 +1,10 @@
 #![allow(clippy::new_ret_no_self)]
 use chk::{Icons, Action, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
-use chk::air::profiles::{Profile, Contact};
-
+use chk::air::profiles::Profile;
 use air::names::{Id, Name};
-
+use air::Instance;
 use std::str::FromStr;
 use std::sync::Arc;
-
 
 #[derive(Debug, Clone)]
 pub struct ContactsHome;
@@ -21,12 +19,12 @@ impl ContactsHome {
         Root::new(
             "Contacts", vec![
                 Display::list(None, Arc::new(Box::new(move |ctx: &mut Context| {
-                    let ids = ctx.list::<Contact>();
                     let _me = ctx.me();
-                    let mut items = ids.iter().flat_map(|id| {
-                        let profile = Profile::from_id(ctx, *id);
+                    let mut items = ctx.list::<Profile>().iter_mut().flat_map(|instance| {
+                        let instance_clone = instance.clone();
+                        let profile = instance.pending();
                         if profile.name.unwrap() != ctx.me() {
-                            let view_contact = Flow::new(&theme, vec![ViewContact::new(ctx, profile.clone(), *id)]);
+                            let view_contact = Flow::new(&theme, vec![ViewContact::new(ctx, instance_clone)]);
                             Some(ListItem::avatar(profile.avatar.clone(), &profile.username, &profile.name(), None, Some(view_contact)))
                         } else {None}
                     }).collect::<Vec<ListItem>>();
@@ -47,11 +45,11 @@ pub struct NewContact;
 impl NewContact {
     pub fn new(theme: &Theme) -> Form {
         let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
-            let (profile, id) = if let Some(State::Text(result)) = objects.first() {
+            let profile = if let Some(State::Text(result)) = objects.first() {
                 let name = Name::from_str(result).unwrap();
                 Profile::create(ctx, name)
             } else {todo!()};
-            Some(ViewContact::new(ctx, profile, id))
+            Some(ViewContact::new(ctx, profile))
         }) as Box<dyn FormSubmit>;
 
         Form::flow(theme, vec![
@@ -71,7 +69,7 @@ impl NewContact {
 
 pub struct ViewContact;
 impl ViewContact {
-    pub fn new(_ctx: &mut Context, profile: Profile, id: Id) -> Box<dyn PageBuilder> {
-        Box::new(move || PageType::profile(profile.clone(), id))
+    pub fn new(_ctx: &mut Context, profile: Instance<Profile>) -> Box<dyn PageBuilder> {
+        Box::new(move || PageType::profile(profile.clone()))
     }
 }
