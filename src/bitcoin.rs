@@ -56,16 +56,7 @@ impl Receive {
         let wallet = wallet.clone();
         Box::new(move || {
             let address = wallet.lock().unwrap().next_address().expect("Could not next address").to_qr_uri();
-            PageType::display(
-                "Receive bitcoin",
-                vec![Display::qr_code(&address, "Scan to receive bitcoin.")],
-                None,
-                Bumper::custom(
-                    if IS_MOBILE {"Share Address"} else {"Copy Address"}, 
-                    if IS_MOBILE {Action::share(&address)} else {Action::copy(&address)}
-                ),
-                Offset::Center,
-            )
+            PageType::display_qr_code("Receive bitcoin", &address, "Scan to receive bitcoin.")
         })
     }
 }

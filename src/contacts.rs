@@ -20,7 +20,8 @@ impl ContactsHome {
             "Contacts", vec![
                 Display::list(None, Arc::new(Box::new(move |ctx: &mut Context| {
                     let _me = ctx.me();
-                    let mut items = ctx.list::<Profile>().iter_mut().flat_map(|instance| {
+                    let mut list = ctx.list::<Profile>();
+                    let mut items = list.iter_mut().flat_map(|instance| {
                         let instance_clone = instance.clone();
                         let profile = instance.pending();
                         if profile.name.unwrap() != ctx.me() {
