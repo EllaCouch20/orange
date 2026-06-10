@@ -1,5 +1,5 @@
 #![allow(clippy::new_ret_no_self)]
-use chk::{Icons, Action, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
+use chk::{FormValidState, Icons, Action, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
 use chk::air::profiles::Profile;
 use air::names::{Id, Name};
 use air::Instance;
@@ -58,10 +58,10 @@ impl NewContact {
                 ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
                 ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
             ]), |_ctx: &mut Context, a: String| match a.is_empty() {
-                true => Err(String::new()),
+                true => FormValidState::Invalid,
                 false => match Name::from_str(&a) {
-                    Ok(_) => Ok(String::new()),
-                    Err(_) => Err("Not a valid Orange Name.".to_string())
+                    Ok(_) => FormValidState::Valid,
+                    Err(_) => FormValidState::InvalidWithData("Not a valid Orange Name.".to_string())
                 }
             }),
         ], None, None, closure)

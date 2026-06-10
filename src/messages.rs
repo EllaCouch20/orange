@@ -73,11 +73,11 @@ pub struct NewMessageFlow;
 impl NewMessageFlow {
     pub fn new(ctx: &mut Context, theme: &Theme) -> Form {
         let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
-            let mut instance = ctx.create::<ChatRoom>(());
+            let mut instance = ctx.create::<ChatRoom>(Id::random());
             
             if let Some(State::Search(result)) = objects.iter().find(|s| matches!(s, State::Search(_))) {
                 result.iter().for_each(|recipient| {
-                    instance.apply(AddMember(*recipient)).unwrap();
+                    instance.apply(AddMember(*recipient));
                     instance.share(*recipient);
                     println!("Created room with members {:?}", recipient);
                 })

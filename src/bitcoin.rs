@@ -10,7 +10,7 @@ use chk::{
     FormItem, NumberVariant, Flow, Bumper,
     Display, Offset, Context, PageType, PageBuilder, Icons,
     Theme, Form, Root, State, Review, Success, FormSubmit,
-    Timestamp, Action, TableItem,
+    Timestamp, Action, TableItem, FormValidState,
 };
 
 #[derive(Debug, Clone)]
@@ -170,8 +170,8 @@ impl SendForm {
             FormItem::text("Bitcoin address", Some(vec![
                 ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
                 ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a bitcoin QR code")),
-            ]), |_ctx: &mut Context, a: String| WalletService::ui_valid_address(&a)),
-            FormItem::number("Bitcoin amount", NumberVariant::Currency, move |_ctx: &mut Context, a: String| w.clone().lock().unwrap().ui_can_afford(a)),
+            ]), |_ctx: &mut Context, a: String| FormValidState::from(WalletService::ui_valid_address(&a))),
+            FormItem::number("Bitcoin amount", NumberVariant::Currency, move |_ctx: &mut Context, a: String| FormValidState::from(w.clone().lock().unwrap().ui_can_afford(a))),
             FormItem::enumerator("Transaction speed", vec![
                 ("Standard", &format!("Arrives in ~2 hours\n{} bitcoin network fee", low.usd(price))),
                 ("Priority", &format!("Arrives in ~30 minutes\n{} bitcoin network fee", high.usd(price))),
