@@ -8,6 +8,8 @@ use air::names::{Id, Name};
 use std::sync::Arc;
 use std::str::FromStr;
 
+use crate::contacts::NewContact;
+
 
 #[derive(Debug, Clone)]
 pub struct MessagesHome;
@@ -95,8 +97,7 @@ impl NewMessageFlow {
             }
         }).collect::<Vec<_>>();
         Form::flow(theme, vec![FormItem::search("Select recipient", items, Some(vec![
-                ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
-                ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
+                ("New contact".to_string(), Icons::Add, Action::flow(Flow::from_form(NewContact::new(theme)))),
             ]))], None, None, closure)
     }
 }
