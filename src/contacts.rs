@@ -54,7 +54,7 @@ impl NewContact {
         }) as Box<dyn FormSubmit>;
 
         Form::flow(theme, vec![
-            FormItem::text("Orange name", Some(vec![
+            FormItem::text("Create contact", Some(vec![
                 ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
                 ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
             ]), |_ctx: &mut Context, a: String| match a.is_empty() {
