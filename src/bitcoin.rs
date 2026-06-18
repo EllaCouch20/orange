@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use crate::wallet::{self, WalletService, WalletTx};
 
 use chk::{
-    FormItem, NumberVariant, Flow, Bumper,
+    FormItem, NumberVariant, Flow, Bumper, FormComplete,
     Display, Offset, Context, PageType, PageBuilder, Icons,
     Theme, Form, Root, State, Review, Success, FormSubmit,
     Timestamp, Action, TableItem, FormValidState,
@@ -126,7 +126,7 @@ impl SendForm {
                 Err(err) => eprintln!("send failed: {err}"),
             }
 
-            None
+            FormComplete::None
         }) as Box<dyn FormSubmit>;
 
         println!("On submit created.");

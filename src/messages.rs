@@ -1,5 +1,5 @@
 #![allow(clippy::new_ret_no_self)]
-use chk::{Action, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem, AvatarIconStyle, Icons};
+use chk::{Action, AvatarContent, FormComplete, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem, AvatarIconStyle, Icons};
 use chk::air::profiles::Profile;
 use chk::air::messages::{ChatRoom, AddMember, Message};
 
@@ -85,7 +85,7 @@ impl NewMessageFlow {
                 })
             }
 
-            Some(Chat::new(instance))
+            FormComplete::Next(Chat::new(instance))
         }) as Box<dyn FormSubmit>;
 
         let items = ctx.list::<Profile>().iter_mut().flat_map(|p| {
@@ -97,8 +97,8 @@ impl NewMessageFlow {
             }
         }).collect::<Vec<_>>();
         Form::flow(theme, vec![FormItem::search("Select recipient", items, Some(vec![
-                ("New contact".to_string(), Icons::Add, Action::flow(Flow::from_form(NewContact::new(theme)))),
-            ]))], None, None, closure)
+            ("New contact".to_string(), Icons::Add, Action::flow(Flow::from_form(CreateAndAddContact::new(theme)))),
+        ]))], None, None, closure)
     }
 }
 
@@ -106,5 +106,34 @@ pub struct Chat;
 impl Chat {
     pub fn new(instance: Instance<ChatRoom>) -> Box<dyn PageBuilder> {
         Box::new(move || PageType::messaging(instance.clone()))
+    }
+}
+
+use chk::FormValidState;
+pub struct CreateAndAddContact;
+impl CreateAndAddContact {
+    pub fn new(theme: &Theme) -> Form {
+        let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
+            let (profile, name) = if let Some(State::Text(result)) = objects.first() {
+                let name = Name::from_str(result).unwrap();
+                (Profile::create(ctx, name), name)
+            } else {todo!()};
+            FormComplete::Return(Box::new(move |ctx: &mut Context, theme: &Theme| {
+                (Action::choose_search(name.clone()).get())(ctx, theme)
+            }))
+        }) as Box<dyn FormSubmit>;
+
+        Form::flow(theme, vec![
+            FormItem::text("Create contact", Some(vec![
+                ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
+                ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
+            ]), |_ctx: &mut Context, a: String| match a.is_empty() {
+                true => FormValidState::Invalid,
+                false => match Name::from_str(&a) {
+                    Ok(_) => FormValidState::Valid,
+                    Err(_) => FormValidState::InvalidWithData("Not a valid Orange Name.".to_string())
+                }
+            }),
+        ], None, None, closure)
     }
 }

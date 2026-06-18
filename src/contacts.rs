@@ -1,5 +1,5 @@
 #![allow(clippy::new_ret_no_self)]
-use chk::{FormValidState, Icons, Action, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
+use chk::{FormValidState, Icons, Action, FormComplete, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
 use chk::air::profiles::Profile;
 use air::names::{Id, Name};
 use air::Instance;
@@ -50,7 +50,7 @@ impl NewContact {
                 let name = Name::from_str(result).unwrap();
                 Profile::create(ctx, name)
             } else {todo!()};
-            Some(ViewContact::new(ctx, profile))
+            FormComplete::Next(ViewContact::new(ctx, profile))
         }) as Box<dyn FormSubmit>;
 
         Form::flow(theme, vec![
