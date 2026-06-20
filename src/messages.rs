@@ -97,7 +97,7 @@ impl NewMessageFlow {
             }
         }).collect::<Vec<_>>();
         Form::flow(theme, vec![FormItem::search("Select recipient", items, Some(vec![
-            ("New contact".to_string(), Icons::Add, Action::flow(Flow::from_form(CreateAndAddContact::new(theme)))),
+            ("New contact".to_string(), None, Icons::Add, Action::flow(Flow::from_form(CreateAndAddContact::new(theme)))),
         ]))], None, None, closure)
     }
 }
@@ -125,8 +125,8 @@ impl CreateAndAddContact {
 
         Form::flow(theme, vec![
             FormItem::text("Create contact", Some(vec![
-                ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
-                ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
+                ("Paste clipboard".to_string(), Some("Pasted".to_string()), Icons::Paste, Action::Paste),
+                ("Scan QR code".to_string(), None, Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
             ]), |_ctx: &mut Context, a: String| match a.is_empty() {
                 true => FormValidState::Invalid,
                 false => match Name::from_str(&a) {

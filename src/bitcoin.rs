@@ -168,8 +168,8 @@ impl SendForm {
         let w = wallet.clone();
         Form::flow(theme, vec![
             FormItem::text("Bitcoin address", Some(vec![
-                ("Paste clipboard".to_string(), Icons::Paste, Action::Paste),
-                ("Scan QR code".to_string(), Icons::QrCode, Action::scan_qr(theme, "Scan a bitcoin QR code")),
+                ("Paste clipboard".to_string(), Some("Pasted".to_string()), Icons::Paste, Action::Paste),
+                ("Scan QR code".to_string(), None, Icons::QrCode, Action::scan_qr(theme, "Scan a bitcoin QR code")),
             ]), |_ctx: &mut Context, a: String| FormValidState::from(WalletService::ui_valid_address(&a))),
             FormItem::number("Bitcoin amount", NumberVariant::Currency, move |_ctx: &mut Context, a: String| FormValidState::from(w.clone().lock().unwrap().ui_can_afford(a))),
             FormItem::enumerator("Transaction speed", vec![
