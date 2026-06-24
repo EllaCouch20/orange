@@ -326,7 +326,7 @@ impl WalletService {
     pub fn ui_valid_address(address: &str) -> Result<String, String> {
         match address.is_empty() {
             true => Err(String::new()),
-            false => Self::validate_address(address).map(|_| String::new()).map_err(|_| "Not a valid address.".to_string()),
+            false => Self::validate_address(address).map(|_| String::new()).map_err(|_| "This is not a valid bitcoin address.".to_string()),
         }
     }
 

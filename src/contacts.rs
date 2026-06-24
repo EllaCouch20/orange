@@ -57,11 +57,14 @@ impl NewContact {
             FormItem::text("Create contact", Some(vec![
                 ("Paste clipboard".to_string(), Some("Pasted".to_string()), Icons::Paste, Action::Paste),
                 ("Scan QR code".to_string(), None, Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
-            ]), |_ctx: &mut Context, a: String| match a.is_empty() {
+            ]), |ctx: &mut Context, a: String| match a.is_empty() {
                 true => FormValidState::Invalid,
                 false => match Name::from_str(&a) {
-                    Ok(_) => FormValidState::Valid,
-                    Err(_) => FormValidState::InvalidWithData("Not a valid Orange Name.".to_string())
+                    Ok(name) => match name == ctx.me() {
+                        true => FormValidState::InvalidWithData("You cannot add yourself as a contact.".to_string()),
+                        false => FormValidState::Valid,
+                    },
+                    Err(_) => FormValidState::InvalidWithData("This is not a valid orange name.".to_string())
                 }
             }),
         ], None, None, closure)
