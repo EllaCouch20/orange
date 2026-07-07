@@ -10,7 +10,7 @@ use chk::{
     FormItem, NumberVariant, Flow, Bumper, FormComplete,
     Display, Offset, Context, PageType, PageBuilder, Icons,
     Theme, Form, Root, State, Review, Success, FormSubmit,
-    Timestamp, Action, TableItem, FormValidState,
+    Timestamp, Action, TableItem, FormValidState, Page,
 };
 
 #[derive(Debug, Clone)]
@@ -23,7 +23,7 @@ impl BitcoinHome {
         let sw = wallet.clone();
         let rw = wallet.clone();
         let send = Box::new(move |_: &mut Context, theme: &Theme| Flow::from_form(SendForm::new(theme, &sw)));
-        let receive = Box::new(move |_: &mut Context, theme: &Theme| Flow::new(theme, vec![Receive::new(&rw)]));
+        let receive = Box::new(move |_: &mut Context, theme: &Theme| Flow::new(vec![Receive::new(&rw)]));
 
         let mut w = wallet.lock().unwrap();
         let price = w.price().unwrap();
@@ -33,7 +33,7 @@ impl BitcoinHome {
         let _theme = theme.clone();
         Root::new("Wallet",
             vec![
-                Display::currency(balance.usd_f32(price), &balance.btc()),
+                Display::currency(move || balance.clone().usd_f32(price).into(), &balance.clone().btc()),
                 // Display::list(None, Arc::new(Box::new(move |ctx: &mut Context| {
                 //     wallet.lock().unwrap().transactions().ok().unwrap().into_iter().map(|t| {
                 //         let title = if t.received { "Received bitcoin" } else { "Sent bitcoin" };
@@ -45,61 +45,60 @@ impl BitcoinHome {
                 //     }).collect::<Vec<_>>()
                 // })), None),
             ], 
-            None, ("Receive".into(), receive), Some(("Send".into(), send)),
+            None, Some(("Receive".into(), receive)), Some(("Send".into(), send)),
         )
     }
 }
 
 pub struct Receive;
 impl Receive {
-    pub fn new(wallet: &Arc<Mutex<WalletService>>) -> Box<dyn PageBuilder> {
+    pub fn new(wallet: &Arc<Mutex<WalletService>>) -> Page {
         let wallet = wallet.clone();
-        Box::new(move || {
-            let address = wallet.lock().unwrap().next_address().expect("Could not next address").to_qr_uri();
-            PageType::display_qr_code("Receive bitcoin", &address, "Scan to receive bitcoin.")
-        })
+        let address = wallet.lock().unwrap().next_address().expect("Could not next address").to_qr_uri();
+        Page::Static(PageType::display_qr_code("Receive bitcoin", &address, "Scan to receive bitcoin."))
     }
 }
 
 pub struct ViewTransaction;
 impl ViewTransaction {
-    pub fn new(price: f64, transaction: WalletTx) -> Box<dyn PageBuilder> {
-        Box::new(move || {
-            let transaction = transaction.clone();
-            let timestamp = Timestamp::new(transaction.timestamp.map(|dt| dt.into()));
+    pub fn new(price: f64, transaction: WalletTx) -> Page {
+        let t = transaction.clone();
+        let timestamp = Timestamp::new(transaction.timestamp.map(|dt| dt.into()));
 
-            let items = match transaction.received {
-                true => vec![
-                    TableItem::new("Date", &timestamp.date()),
-                    TableItem::new("Time", &timestamp.time()),
-                    TableItem::new("Received at address", &transaction.address_short.unwrap()),
-                    TableItem::new("Bitcoin received", &transaction.amount.btc()),
-                    TableItem::new("Bitcoin price", &wallet::Amount::usd_from_f32(transaction.btc_price_usd.unwrap() as f32)),
-                    TableItem::new("Amount received", &transaction.amount.usd(price))
-                ],
-                false => vec![
-                    TableItem::new("Date", &timestamp.date()),
-                    TableItem::new("Time", &timestamp.time()),
-                    TableItem::new("Sent to address", &transaction.address_short.unwrap_or_default()),
-                    TableItem::new("Bitcoin sent", &transaction.amount.btc()),
-                    TableItem::new("Bitcoin price", &wallet::Amount::usd_from_f32(transaction.btc_price_usd.unwrap() as f32)),
-                    TableItem::new("Amount sent", &transaction.amount.usd(price)),
-                    TableItem::new("Network fee", &transaction.fee.unwrap().usd(price)),
-                    TableItem::new("Total", &(transaction.fee.unwrap() + transaction.amount).usd(price))
-                ]
-            };
+        let items = match transaction.received {
+            true => vec![
+                TableItem::new("Date", &timestamp.date()),
+                TableItem::new("Time", &timestamp.time()),
+                TableItem::new("Received at address", &transaction.address_short.unwrap()),
+                TableItem::new("Bitcoin received", &transaction.amount.btc()),
+                TableItem::new("Bitcoin price", &wallet::Amount::usd_from_f32(transaction.btc_price_usd.unwrap() as f32)),
+                TableItem::new("Amount received", &transaction.amount.usd(price))
+            ],
+            false => vec![
+                TableItem::new("Date", &timestamp.date()),
+                TableItem::new("Time", &timestamp.time()),
+                TableItem::new("Sent to address", &transaction.address_short.unwrap_or_default()),
+                TableItem::new("Bitcoin sent", &transaction.amount.btc()),
+                TableItem::new("Bitcoin price", &wallet::Amount::usd_from_f32(transaction.btc_price_usd.unwrap() as f32)),
+                TableItem::new("Amount sent", &transaction.amount.usd(price)),
+                TableItem::new("Network fee", &transaction.fee.unwrap().usd(price)),
+                TableItem::new("Total", &(transaction.fee.unwrap() + transaction.amount).usd(price))
+            ]
+        };
 
-            PageType::display(
-                &format!("{} bitcoin", if transaction.received {"Received"} else {"Sent"}),
-                vec![
-                    Display::currency(transaction.amount.usd_f32(price), &transaction.amount.btc()),
-                    Display::table("Transaction details", items),
-                ],
-                None,
-                Bumper::Done,
-                Offset::Start,
-            )
-        })
+        Page::Static(PageType::display(
+            &format!("{} bitcoin", if transaction.received {"Received"} else {"Sent"}),
+            vec![
+                Display::currency(move || {
+                    let transaction = t.clone();
+                    transaction.amount.usd_f32(price).into()
+                }, &transaction.amount.btc()),
+                Display::table("Transaction details", items),
+            ],
+            None,
+            Bumper::Done,
+            Offset::Start,
+        ))
     }
 }
 

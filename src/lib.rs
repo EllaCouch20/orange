@@ -16,7 +16,7 @@ use chk::air::messages::{ChatRoom, Message};
 
 use std::time::Duration;
 
-chk::run! {|ctx: &mut Context| Orange::new(ctx) }
+chk::run! {[], |ctx: &mut Context| Orange::new(ctx) }
 
 // pub struct MessagesListener(Vec<Message>);
 // impl Service for MessagesListener {

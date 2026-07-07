@@ -76,6 +76,7 @@ dependencies = [
  "substance",
  "tokio",
  "tokio-tungstenite",
+ "tokio-util",
  "url",
 ]
 
@@ -2610,9 +2611,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.29"
+version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
+checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "loop9"
@@ -4127,6 +4128,7 @@ version = "0.1.6"
 dependencies = [
  "air",
  "include_dir",
+ "log",
  "maverick_os",
  "prism2",
  "wgpu_canvas",
@@ -5329,6 +5331,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-util"
+version = "0.7.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "futures-util",
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
 name = "toml_datetime"
 version = "1.1.1+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6042,6 +6058,7 @@ dependencies = [
  "fontdue",
  "image 0.24.9",
  "lazy_static",
+ "unicode-segmentation",
  "wgpu",
 ]
 
