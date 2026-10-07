@@ -1,8 +1,7 @@
 #![allow(clippy::new_ret_no_self)]
 use chk::{Page, FormValidState, Icons, Action, FormComplete, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
 use chk::air::profiles::Profile;
-use air::names::{Id, Name};
-use air::Instance;
+use maverick_os::air::{Id, Name, Instance};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -14,9 +13,9 @@ impl ContactsHome {
             let new_contact = Box::new(|_ctx: &mut Context, theme: &Theme| Flow::from_form(NewContact::new(theme)));
             let mut items = list.iter_mut().flat_map(|instance| {
                 let instance_clone = instance.clone();
-                let profile = instance.load_pending();
+                let profile = instance.pending();
                 if profile.name.unwrap() != ctx.me() {
-                    let view_contact = Flow::new(vec![ViewContact::new(ctx, instance_clone)]);
+                    let view_contact = Flow::new(vec![ViewContact::new(ctx, theme, instance_clone)]);
                     Some(ListItem::avatar(profile.avatar.clone(), &profile.username, &profile.name(), None, Some(view_contact)))
                 } else {None}
             }).collect::<Vec<ListItem>>();
@@ -32,12 +31,14 @@ impl ContactsHome {
 pub struct NewContact;
 impl NewContact {
     pub fn new(theme: &Theme) -> Form {
+        let t = theme.clone();
         let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
+            let theme = t.clone();
             let profile = if let Some(State::Text(result)) = objects.first() {
                 let name = Name::from_str(result).unwrap();
                 Profile::create(ctx, name)
             } else {todo!()};
-            FormComplete::Next(ViewContact::new(ctx, profile))
+            FormComplete::Next(ViewContact::new(ctx, &theme, profile))
         }) as Box<dyn FormSubmit>;
 
         Form::flow(theme, vec![
@@ -60,7 +61,7 @@ impl NewContact {
 
 pub struct ViewContact;
 impl ViewContact {
-    pub fn new(_ctx: &mut Context, mut profile: Instance<Profile>) -> Page {
-        Page::profile(&mut profile)
+    pub fn new(ctx: &mut Context, theme: &Theme, mut profile: Instance<Profile>) -> Page {
+        Page::profile(ctx, theme, &mut profile)
     }
 }

@@ -6,7 +6,7 @@ mod wallet;
 use crate::wallet::WalletService;
 mod state;
 pub use state::*;
-mod bitcoin;
+// mod bitcoin;
 mod messages;
 mod contacts;
 mod profile;
@@ -41,7 +41,7 @@ chk::run! {[], |ctx: &mut Context| Orange::new(ctx) }
 //     }
 // }
 
-pub struct Orange { wallet: Arc<Mutex<WalletService>> }
+pub struct Orange; //{ wallet: Arc<Mutex<WalletService>> }
 // impl Default for Orange { fn default() -> Self {Orange::new()} }
 
 impl Orange {
@@ -53,9 +53,9 @@ impl Orange {
         //     }
         // });
 
-        let wallet = WalletService::new().expect("failed to create wallet");
+        // let wallet = WalletService::new().expect("failed to create wallet");
         
-        Orange { wallet: Arc::new(Mutex::new(wallet)) }
+        Orange //{ wallet: Arc::new(Mutex::new(wallet)) }
     }
 }
 
@@ -65,7 +65,7 @@ impl chk::App for Orange {
         let contacts_home = contacts::ContactsHome::new(ctx, theme);
         let profile_home = profile::ProfileHome::new(ctx, theme);
         vec![
-            RootInfo::icon(ctx, theme, Icons::Wallet, "Bitcoin", bitcoin::BitcoinHome::new(theme, &self.wallet)),
+            // RootInfo::icon(ctx, theme, Icons::Wallet, "Bitcoin", bitcoin::BitcoinHome::new(theme, &self.wallet)),
             RootInfo::icon(ctx, theme, Icons::Messages, "Messages", messages_home),
             RootInfo::icon(ctx, theme, Icons::Group, "Contacts", contacts_home),
             RootInfo::avatar(ctx, theme, AvatarContent::icon(Icons::Profile, AvatarIconStyle::Secondary), "Profile", profile_home)

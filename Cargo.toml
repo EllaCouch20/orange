@@ -16,7 +16,7 @@ ureq = { version = "2", features = ["json"] }
 serde_json = "1"
 chrono = "0.4.44"
 unified_uri = "0.1.0"
-air = {path = "../air"}
+maverick_os = {path = "../maverick_os"}
 
 [lib]
 name="main"

@@ -1,10 +1,9 @@
 #![allow(clippy::new_ret_no_self)]
 use chk::{Page, Action, AvatarContent, FormComplete, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem, AvatarIconStyle, Icons};
 use chk::air::profiles::Profile;
-use chk::air::messages::{ChatRoom, AddMember, Message};
+use chk::air::messages::{ChatRoom, Message, ChatRoomAction};
 
-use air::Instance;
-use air::names::{Id, Name};
+use maverick_os::air::{Instance, Id, Name};
 use std::sync::Arc;
 use std::str::FromStr;
 
@@ -20,7 +19,7 @@ impl MessagesHome {
             let theme = theme.clone();
             let mut items = ctx.list::<ChatRoom>().iter_mut().map(|(_, instance)| {
                 let chat = Flow::new(vec![Chat::new(ctx, instance.clone())]);
-                let room = instance.load_pending();
+                let room = instance.pending();
 
                 let mut ts = 0;
                 let chat_name = room.name(ctx).to_string();
@@ -34,7 +33,7 @@ impl MessagesHome {
                 } else {
                     if let Some(name) = members.first() {
                         let mut p = Profile::from_name(ctx, *name);
-                        let p = p.load_pending();
+                        let p = p.pending();
                         chat_avatar = p.avatar.clone();
                     } else {println!("Looks like you are the only one here for now.")}
                 }
@@ -43,7 +42,7 @@ impl MessagesHome {
                     ts = last.timestamp;
                     chat_last = last.body.to_string();
                     let mut recent = Profile::from_name(ctx, last.author);
-                    let recent = recent.load_pending();
+                    let recent = recent.pending();
                     match last.author == ctx.me() {
                         true => chat_last = format!("You: {}", chat_last),
                         false => chat_last = format!("{}: {}", recent.username, chat_last)
@@ -68,22 +67,23 @@ pub struct NewMessageFlow;
 impl NewMessageFlow {
     pub fn new(ctx: &mut Context, theme: &Theme) -> Form {
         let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
+            println!("Creating chatroom");
             let mut instance = ctx.create::<ChatRoom>(Id::random());
             
             if let Some(State::Search(result)) = objects.iter().find(|s| matches!(s, State::Search(_))) {
                 result.iter().for_each(|recipient| {
-                    instance.apply(AddMember(*recipient));
-                    instance.share(*recipient);
+                    instance.send(ChatRoomAction::Share(*recipient));
+                    // instance.share(*recipient);
                     println!("Created room with members {:?}", recipient);
                 })
             }
 
-            FormComplete::Next(Chat::new(ctx, instance))
+            FormComplete::Next(Page::messaging(ctx, &mut instance.clone()))
         }) as Box<dyn FormSubmit>;
 
         let items = ctx.list::<Profile>().iter_mut().flat_map(|(_, p)| {
-            if p.load_pending().name.unwrap() != ctx.me() {
-                let profile = p.load_pending();
+            if p.pending().name.unwrap() != ctx.me() {
+                let profile = p.pending();
                 Some((ListItem::avatar(AvatarContent::default(), &profile.username, &profile.name(), None, None), profile.name.unwrap()))
             } else {
                 None

@@ -93,7 +93,7 @@ impl ViewTransaction {
                     let transaction = t.clone();
                     transaction.amount.usd_f32(price).into()
                 }, &transaction.amount.btc()),
-                Display::table("Transaction details", items),
+                Display::table("Transaction details", items, None),
             ],
             None,
             Bumper::Done,
@@ -154,7 +154,7 @@ impl SendForm {
                     TableItem::new("Amount sent", &amount.usd(price)),
                     TableItem::new("Transaction fee", &fee.usd(price)),
                     TableItem::new("Transaction total", &(amount + fee).usd(price)),
-                ]),
+                ], None),
             ]
         };
 
