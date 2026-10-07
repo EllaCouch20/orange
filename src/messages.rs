@@ -82,12 +82,13 @@ impl NewMessageFlow {
         }) as Box<dyn FormSubmit>;
 
         let items = ctx.list::<Profile>().iter_mut().flat_map(|(_, p)| {
-            if p.pending().name.unwrap() != ctx.me() {
-                let profile = p.pending();
-                Some((ListItem::avatar(AvatarContent::default(), &profile.username, &profile.name(), None, None), profile.name.unwrap()))
-            } else {
-                None
-            }
+            let profile = p.pending();
+            let username = match profile.name == Some(ctx.me()) {
+                true => format!("{} (You)", profile.username),
+                false => profile.username.to_string()
+            };
+
+            Some((ListItem::avatar(AvatarContent::default(), &username, &profile.name(), None, None), profile.name.unwrap()))
         }).collect::<Vec<_>>();
         Form::flow(theme, vec![FormItem::search("Select recipient", items, Some(vec![
             ("New contact".to_string(), None, Icons::Add, Action::flow(Flow::from_form(CreateAndAddContact::new(theme)))),
