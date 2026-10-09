@@ -14,10 +14,10 @@ use crate::contacts::NewContact;
 pub struct MessagesHome;
 impl MessagesHome {
     pub fn new(ctx: &mut Context, theme: &Theme) -> Root {
-        Root::custom(Page::updates_list_changes::<Profile>(ctx, |ctx: &mut Context, theme: &Theme, mut list: Vec<Instance<Profile>>| {
+        Root::custom(Page::updates_list_changes::<ChatRoom>(ctx, |ctx: &mut Context, theme: &Theme, mut list: Vec<Instance<ChatRoom>>| {
             let new_message = Box::new(|ctx: &mut Context, theme: &Theme| Flow::from_form(NewMessageFlow::new(ctx, theme)));
             let theme = theme.clone();
-            let mut items = ctx.list::<ChatRoom>().iter_mut().map(|(_, instance)| {
+            let mut items = list.iter_mut().map(|instance| {
                 let chat = Flow::new(vec![Chat::new(ctx, instance.clone())]);
                 let room = instance.pending();
 
@@ -73,7 +73,7 @@ impl NewMessageFlow {
             if let Some(State::Search(result)) = objects.iter().find(|s| matches!(s, State::Search(_))) {
                 result.iter().for_each(|recipient| {
                     instance.send(ChatRoomAction::Share(*recipient));
-                    // instance.share(*recipient);
+                    instance.share(*recipient);
                     println!("Created room with members {:?}", recipient);
                 })
             }
