@@ -41,7 +41,8 @@ impl MessagesHome {
                     ts = last.timestamp;
                     chat_last = match &last.body {
                         MessageContent::Text(message) => message.to_string(),
-                        MessageContent::Sticker(sticker) => "Sticker".to_string(),
+                        MessageContent::Sticker(_) => "Sticker".to_string(),
+                        MessageContent::Gif(_) => "GIF".to_string(),
                     };
 
                     let mut recent = Profile::from_name(ctx, last.author);
@@ -71,17 +72,12 @@ impl NewMessageFlow {
     pub fn new(ctx: &mut Context, theme: &Theme) -> Form {
         let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
             println!("Creating chatroom");
-            let mut instance = ctx.create::<ChatRoom>(Id::random());
             
-            if let Some(State::Search(result)) = objects.iter().find(|s| matches!(s, State::Search(_))) {
-                result.iter().for_each(|recipient| {
-                    instance.send(ChatRoomAction::Share(*recipient));
-                    instance.share(*recipient);
-                    println!("Created room with members {:?}", recipient);
-                })
-            }
+            if let Some(State::Search(recipients)) = objects.iter().find(|s| matches!(s, State::Search(_))) {
+                let instance = ChatRoom::create(ctx, recipients.to_vec());
+                FormComplete::Next(Page::messaging(ctx, &mut instance.clone()))
+            } else {FormComplete::None}
 
-            FormComplete::Next(Page::messaging(ctx, &mut instance.clone()))
         }) as Box<dyn FormSubmit>;
 
         let items = ctx.list::<Profile>().iter_mut().flat_map(|(_, p)| {

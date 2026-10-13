@@ -16,7 +16,10 @@ use chk::air::messages::{ChatRoom, Message};
 
 use std::time::Duration;
 
-chk::run! {[], |ctx: &mut Context| Orange::new(ctx) }
+chk::run! {[], |ctx: &mut Context| {
+    chk::set_giphy_api_key("RL2FFrfnJ8J6jcb8XRZ4ImqkFLrpW5Tt");
+    Orange::new(ctx) 
+}}
 
 // pub struct MessagesListener(Vec<Message>);
 // impl Service for MessagesListener {
