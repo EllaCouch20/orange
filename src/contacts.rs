@@ -1,5 +1,5 @@
 #![allow(clippy::new_ret_no_self)]
-use chk::{Page, FormValidState, Icons, Action, FormComplete, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
+use chk::{FormAction, Page, FormValidState, Icons, Action, FormComplete, AvatarContent, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem};
 use chk::air::profiles::Profile;
 use maverick_os::air::{Id, Name, Instance};
 use std::str::FromStr;
@@ -42,10 +42,9 @@ impl NewContact {
         }) as Box<dyn FormSubmit>;
 
         Form::flow(theme, vec![
-            FormItem::text("Create contact", Some(vec![
-                ("Paste clipboard".to_string(), Some("Pasted".to_string()), Icons::Paste, Action::Paste),
-                ("Scan QR code".to_string(), None, Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
-            ]), |ctx: &mut Context, a: String| match a.is_empty() {
+            FormItem::text("New contact", "orange name", 
+            Some(vec![FormAction::Paste, FormAction::scan_qr_code(&theme, "Scan a profile QR code")]), 
+            |ctx: &mut Context, a: String| match a.is_empty() {
                 true => FormValidState::Invalid,
                 false => match Name::from_str(&a) {
                     Ok(name) => match name == ctx.me() {

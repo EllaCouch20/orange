@@ -1,14 +1,13 @@
 #![allow(clippy::new_ret_no_self)]
-use chk::{Page, Action, AvatarContent, FormComplete, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem, AvatarIconStyle, Icons};
+use chk::{FormAction, Page, Action, AvatarContent, FormComplete, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem, AvatarIconStyle, Icons};
 use chk::air::profiles::Profile;
-use chk::air::messages::{ChatRoom, Message, ChatRoomAction};
+use chk::air::messages::{ChatRoom, Message, MessageContent, ChatRoomAction};
 
 use maverick_os::air::{Instance, Id, Name};
 use std::sync::Arc;
 use std::str::FromStr;
 
 use crate::contacts::NewContact;
-
 
 #[derive(Debug, Clone)]
 pub struct MessagesHome;
@@ -40,7 +39,11 @@ impl MessagesHome {
                 
                 if let Some(last) = room.messages.last() {
                     ts = last.timestamp;
-                    chat_last = last.body.to_string();
+                    chat_last = match &last.body {
+                        MessageContent::Text(message) => message.to_string(),
+                        MessageContent::Sticker(sticker) => "Sticker".to_string(),
+                    };
+
                     let mut recent = Profile::from_name(ctx, last.author);
                     let recent = recent.pending();
                     match last.author == ctx.me() {
@@ -90,8 +93,8 @@ impl NewMessageFlow {
 
             Some((ListItem::avatar(AvatarContent::default(), &username, &profile.name(), None, None), profile.name.unwrap()))
         }).collect::<Vec<_>>();
-        Form::flow(theme, vec![FormItem::search("Select recipient", items, Some(vec![
-            ("New contact".to_string(), None, Icons::Add, Action::flow(Flow::from_form(CreateAndAddContact::new(theme)))),
+        Form::flow(theme, vec![FormItem::search("New message", "profile name", items, Some(vec![
+            FormAction::Custom("New contact".to_string(), None, Icons::Add, Action::flow(Flow::from_form(CreateAndAddContact::new(theme)))),
         ]))], None, None, closure)
     }
 }
@@ -118,10 +121,9 @@ impl CreateAndAddContact {
         }) as Box<dyn FormSubmit>;
 
         Form::flow(theme, vec![
-            FormItem::text("Create contact", Some(vec![
-                ("Paste clipboard".to_string(), Some("Pasted".to_string()), Icons::Paste, Action::Paste),
-                ("Scan QR code".to_string(), None, Icons::QrCode, Action::scan_qr(theme, "Scan a profile QR code")),
-            ]), |_ctx: &mut Context, a: String| match a.is_empty() {
+            FormItem::text("New contact", "orange name", 
+            Some(vec![FormAction::Paste, FormAction::scan_qr_code(&theme, "Scan a profile QR code")]), 
+            |_ctx: &mut Context, a: String| match a.is_empty() {
                 true => FormValidState::Invalid,
                 false => match Name::from_str(&a) {
                     Ok(_) => FormValidState::Valid,
