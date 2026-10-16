@@ -26,6 +26,7 @@
 		8826FE712DA6BC6900588BC3 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8826FE702DA6BC6900588BC3 /* ApplicationServices.framework */; platformFilters = (macos, ); };
 		88B03F722D78C81E0013AA60 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 88B03F712D78C81E0013AA60 /* QuartzCore.framework */; };
 		88B03F762D78CD600013AA60 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 88B03F752D78CD600013AA60 /* Foundation.framework */; };
+		88C1854D307F00F100519410 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 88C1854C307F00F100519410 /* ImageIO.framework */; };
 		88E18C472DDFFAD200C824BD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 88E18C462DDFFAD200C824BD /* Assets.xcassets */; };
 		88E18C4A2DDFFB3900C824BD /* LaunchScreenDesktop.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 88E18C492DDFFB3900C824BD /* LaunchScreenDesktop.storyboard */; platformFilters = (macos, ); };
 		88E18C4C2DE004E700C824BD /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 88E18C4B2DE004E700C824BD /* LaunchScreen.storyboard */; platformFilter = ios; };
@@ -66,6 +67,7 @@
 		88B03F712D78C81E0013AA60 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		88B03F732D78CA080013AA60 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		88B03F752D78CD600013AA60 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		88C1854C307F00F100519410 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
 		88E18C462DDFFAD200C824BD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		88E18C492DDFFB3900C824BD /* LaunchScreenDesktop.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreenDesktop.storyboard; sourceTree = "<group>"; };
 		88E18C4B2DE004E700C824BD /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -80,6 +82,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				88C1854D307F00F100519410 /* ImageIO.framework in Frameworks */,
 				88EDBAA72DE6668D00C999C7 /* PhotosUI.framework in Frameworks */,
 				882603C62DA6BCAC00588BC3 /* Cocoa.framework in Frameworks */,
 				8826FE712DA6BC6900588BC3 /* ApplicationServices.framework in Frameworks */,
@@ -140,6 +143,7 @@
 		EB028409C2D0655412DA6E44 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				88C1854C307F00F100519410 /* ImageIO.framework */,
 				88EDBAA62DE6668D00C999C7 /* PhotosUI.framework */,
 				88141E3C2DBBE01700A08D1D /* liborange.a */,
 				8826005F2DA6BC9D00588BC3 /* Cocoa.framework */,

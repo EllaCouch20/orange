@@ -46,3 +46,8 @@ opt-level = 3
 opt-level = 3
 [profile.dev.package.weezl]
 opt-level = 3
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+openh264 = "0.9"
+mp4 = "0.14"
+symphonia = { version = "0.6", default-features = false, features = ["isomp4", "aac"] }
+cpal = "0.18"

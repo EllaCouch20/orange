@@ -1,21 +1,19 @@
 #![allow(clippy::new_ret_no_self)]
-use chk::{FormAction, Page, Action, AvatarContent, FormComplete, FormItem, Flow, Display, Context, PageType, PageBuilder, Theme, Form, Root, State, FormSubmit, ListItem, AvatarIconStyle, Icons};
+use chk::{FormAction, Page, Action, AvatarContent, FormComplete, FormItem, Flow, Display, Context, PageType, Theme, Form, Root, State, FormSubmit, ListItem, AvatarIconStyle, Icons};
 use chk::air::profiles::Profile;
-use chk::air::messages::{ChatRoom, Message, MessageContent, ChatRoomAction};
+use chk::air::messages::{ChatRoom, MessageContent};
 
-use maverick_os::air::{Instance, Id, Name};
-use std::sync::Arc;
+use maverick_os::air::{Instance, Name};
 use std::str::FromStr;
-
-use crate::contacts::NewContact;
 
 #[derive(Debug, Clone)]
 pub struct MessagesHome;
 impl MessagesHome {
-    pub fn new(ctx: &mut Context, theme: &Theme) -> Root {
-        Root::custom(Page::updates_list_changes::<ChatRoom>(ctx, |ctx: &mut Context, theme: &Theme, mut list: Vec<Instance<ChatRoom>>| {
+    pub fn new(ctx: &mut Context) -> Root {
+        Root::custom(Page::updates_list_changes::<ChatRoom>(ctx, |ctx: &mut Context, _theme: &Theme, mut list: Vec<Instance<ChatRoom>>| {
+            chk::air::messages::VideoClip::listen(ctx);
+
             let new_message = Box::new(|ctx: &mut Context, theme: &Theme| Flow::from_form(NewMessageFlow::new(ctx, theme)));
-            let theme = theme.clone();
             let mut items = list.iter_mut().map(|instance| {
                 let chat = Flow::new(vec![Chat::new(ctx, instance.clone())]);
                 let room = instance.pending();
@@ -31,21 +29,23 @@ impl MessagesHome {
                     chat_avatar = AvatarContent::Icon(Icons::Group, AvatarIconStyle::Secondary);
                 } else {
                     if let Some(name) = members.first() {
-                        let mut p = Profile::from_name(ctx, *name);
+                        let p = Profile::from_name(ctx, *name);
                         let p = p.pending();
                         chat_avatar = p.avatar.clone();
                     } else {println!("Looks like you are the only one here for now.")}
                 }
                 
-                if let Some(last) = room.messages.last() {
+                if let Some(last) = room.messages(ctx.me()).last() {
                     ts = last.timestamp;
                     chat_last = match &last.body {
                         MessageContent::Text(message) => message.to_string(),
                         MessageContent::Sticker(_) => "Sticker".to_string(),
                         MessageContent::Gif(_) => "GIF".to_string(),
+                        MessageContent::Photo(_) => "Photo".to_string(),
+                        MessageContent::Video(_) => "Video".to_string(),
                     };
 
-                    let mut recent = Profile::from_name(ctx, last.author);
+                    let recent = Profile::from_name(ctx, last.author);
                     let recent = recent.pending();
                     match last.author == ctx.me() {
                         true => chat_last = format!("You: {}", chat_last),
@@ -57,7 +57,7 @@ impl MessagesHome {
                 (ts, list_item)
             }).collect::<Vec<(u64, ListItem)>>();
             
-            items.sort_by(|a, b| b.0.cmp(&a.0));
+            items.sort_by_key(|b| std::cmp::Reverse(b.0));
             let items = items.into_iter().map(|(_, item)| item).collect::<Vec<ListItem>>();
             
             PageType::root("Messages", vec![], vec![
@@ -107,18 +107,18 @@ pub struct CreateAndAddContact;
 impl CreateAndAddContact {
     pub fn new(theme: &Theme) -> Form {
         let closure = Box::new(move |ctx: &mut Context, objects: &Vec<State>| {
-            let (profile, name) = if let Some(State::Text(result)) = objects.first() {
+            let (_, name) = if let Some(State::Text(result)) = objects.first() {
                 let name = Name::from_str(result).unwrap();
                 (Profile::create(ctx, name), name)
             } else {todo!()};
             FormComplete::Return(Box::new(move |ctx: &mut Context, theme: &Theme| {
-                (Action::choose_search(name.clone()).get())(ctx, theme)
+                (Action::choose_search(name).get())(ctx, theme)
             }))
         }) as Box<dyn FormSubmit>;
 
         Form::flow(theme, vec![
             FormItem::text("New contact", "orange name", 
-            Some(vec![FormAction::Paste, FormAction::scan_qr_code(&theme, "Scan a profile QR code")]), 
+            Some(vec![FormAction::Paste, FormAction::scan_qr_code("Scan a profile QR code")]), 
             |_ctx: &mut Context, a: String| match a.is_empty() {
                 true => FormValidState::Invalid,
                 false => match Name::from_str(&a) {
